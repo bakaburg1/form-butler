@@ -95,7 +95,7 @@ class ModelManager {
                 item.innerHTML = `
                     <a class="dropdown-item d-flex justify-content-between align-items-center" href="#" data-model='${JSON.stringify(model)}'>
                         <span>
-                            <i class="bi bi-check-circle-fill text-success me-2" style="display: none;"></i>
+                            <i class="bi bi-check text-success me-2" style="display: none;"></i>
                             ${model_name}
                         </span>
                         <i class="bi bi-x-circle text-danger delete-model hide showOnHover"></i>

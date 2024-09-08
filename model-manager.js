@@ -11,6 +11,7 @@ class ModelManager {
         this.saveButton = document.getElementById('save-llm-button');
         this.defaultAPISpec = 'openai';
         this.models = [];
+        this.currentModel = null;
         
         this.initializeEventListeners();
         this.loadModels();
@@ -93,7 +94,7 @@ class ModelManager {
                 
                 const item = document.createElement('li');
                 item.innerHTML = `
-                    <a class="dropdown-item d-flex justify-content-between align-items-center" href="#" data-model='${JSON.stringify(model)}'>
+                    <a class="dropdown-item d-flex justify-content-between align-items-center" href="#" data-model-name="${model.name}">
                         <span>
                             <i class="bi bi-check text-success me-2" style="display: none;"></i>
                             ${model_name}
@@ -137,17 +138,20 @@ class ModelManager {
         // headers.forEach(header => header.style.display = 'none');
         
         items.forEach(item => {
-            const model = JSON.parse(item.dataset.model);
-            const matchesSearch = model.name.toLowerCase().includes(searchTerm) || 
-            model.endpoint.toLowerCase().includes(searchTerm);
-            
-            item.style.display = matchesSearch ? '' : 'none';
-            
-            if (matchesSearch) {
-                const header = item.previousElementSibling;
-                // if (header && header.classList.contains('dropdown-header')) {
-                //     header.style.display = '';
-                // }
+            const modelName = item.dataset.modelName;
+            const model = this.getModel(modelName);
+            if (model) {
+                const matchesSearch = model.name.toLowerCase().includes(searchTerm) || 
+                model.endpoint.toLowerCase().includes(searchTerm);
+                
+                item.style.display = matchesSearch ? '' : 'none';
+                
+                if (matchesSearch) {
+                    const header = item.previousElementSibling;
+                    // if (header && header.classList.contains('dropdown-header')) {
+                    //     header.style.display = '';
+                    // }
+                }
             }
         });
     }
@@ -165,13 +169,18 @@ class ModelManager {
         if (event.target.classList.contains('delete-model')) {
             event.preventDefault();
             event.stopPropagation();
-            const model = JSON.parse(model_item.dataset.model);
-            this.deleteModel(model);
+            const modelName = model_item.dataset.modelName;
+            const model = this.getModel(modelName);
+            if (model) {
+                this.deleteModel(model);
+            }
         } else {
-
             if (model_item) {
-                const model = JSON.parse(model_item.dataset.model);
-                this.selectModel(model);
+                const modelName = model_item.dataset.modelName;
+                const model = this.getModel(modelName);
+                if (model) {
+                    this.selectModel(model);
+                }
             }
         }
     }
@@ -181,12 +190,13 @@ class ModelManager {
      * @param {Object} model - The model object to be selected.
      */
     selectModel(model) {
+        this.currentModel = model;
         this.searchInput.value = model.name;
         this.modelInput.value = model.name;
         this.endpointInput.value = model.endpoint;
         this.apiKeyInput.value = model.apiKey;
         this.apiSpecInput.value = model.apiSpec || this.defaultAPISpec;
-        this.handleAPIChange()
+        this.handleAPIChange();
         this.hideDropdown();
         this.updateCurrentModelCheckmark();
     }
@@ -322,19 +332,22 @@ class ModelManager {
 
     // Add this new method
     updateCurrentModelCheckmark() {
-        chrome.storage.sync.get(['currentModel'], (result) => {
-            if (result.currentModel) {
-                const items = this.dropdownMenu.querySelectorAll('.dropdown-item');
-                items.forEach(item => {
-                    const model = JSON.parse(item.dataset.model);
-                    const checkmark = item.querySelector('.bi-check-circle-fill');
-                    if (model.name === result.currentModel.name && model.endpoint === result.currentModel.endpoint) {
-                        checkmark.style.display = 'inline-block';
-                    } else {
-                        checkmark.style.display = 'none';
-                    }
-                });
+        const items = this.dropdownMenu.querySelectorAll('.dropdown-item');
+        items.forEach(item => {
+            const modelName = item.dataset.modelName;
+            const checkmark = item.querySelector('.bi-check');
+            if (this.currentModel && modelName === this.currentModel.name) {
+                checkmark.style.display = 'inline-block';
+            } else {
+                checkmark.style.display = 'none';
             }
         });
+    }
+
+    getModel(name) {
+        if (!name) {
+            return this.currentModel;
+        }
+        return this.models.find(m => m.name === name) || null;
     }
 }

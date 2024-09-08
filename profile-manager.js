@@ -22,6 +22,7 @@ class ProfileManager {
         await this.saveProfiles();
         
         this.initializeUI();
+        this.loadFields();
         this.updateSearchInput();
     }
 

@@ -13,26 +13,43 @@ class ModelManager {
         this.models = [];
         this.currentModel = null;
         
-        this.initializeEventListeners();
-        this.loadModels();
-        this.updateSearchInput(); // Add this line
+        this.init();
     }
-    
-    /**
-     * Initializes the event listeners for the ModelManager class.
-     * - Adds a focus event listener to the searchInput that calls the
-     *   showDropdown method.
-     * - Adds an input event listener to the searchInput that calls the
-     *   filterModels method.
-     * - Adds a click event listener to the dropdownMenu that calls the
-     *   onDropdownItemClick method.
-     * - Adds a click event listener to the saveButton that calls the saveModel
-     *   method.
-     * - Adds a change event listener to the apiSpecInput that calls the
-     *   handleAPIChange method.
-     * - Adds a click event listener to the document that calls the
-     *   handleClickOutside method.
-     */
+
+    async init() {
+        await this.loadModels();
+        await this.loadFields();
+        this.initializeEventListeners();
+        this.updateSearchInput();
+        this.updateDropdownMenu();
+    }
+
+    async loadModels() {
+        return new Promise((resolve) => {
+            chrome.storage.sync.get(['models'], (result) => {
+                this.models = result.models || [];
+                resolve();
+            });
+        });
+    }
+
+    async loadFields() {
+        return new Promise((resolve) => {
+            chrome.storage.sync.get(['currentModel'], (result) => {
+                if (result.currentModel) {
+                    this.currentModel = result.currentModel;
+                    this.apiSpecInput.value = this.currentModel.apiSpecification || 'openai';
+                    this.modelInput.value = this.currentModel.name || '';
+                    this.endpointInput.value = this.currentModel.endpoint || '';
+                    this.apiKeyInput.value = this.currentModel.apiKey || '';
+                    document.getElementById('azure-api-version').value = this.currentModel.apiVersion || '';
+                    this.handleAPIChange();
+                }
+                resolve();
+            });
+        });
+    }
+
     initializeEventListeners() {
         this.searchInput.addEventListener('focus', () => this.showDropdown());
         this.searchInput.addEventListener('input', () => this.filterModels());
@@ -40,17 +57,6 @@ class ModelManager {
         this.saveButton.addEventListener('click', () => this.saveModel());
         this.apiSpecInput.addEventListener('change', () => this.handleAPIChange());
         document.addEventListener('click', (event) => this.handleClickOutside(event));
-    }
-    
-    /**
-    * Loads the models from the browser's sync storage and assigns them to the
-    * `models` property. This method is called during the initialization of the
-    * `ModelManager` class.
-    */
-    loadModels() {
-        chrome.storage.sync.get(['models'], (result) => {
-            this.models = result.models || [];
-        });
     }
     
     /**
@@ -91,12 +97,11 @@ class ModelManager {
             
             models.forEach((model) => {
                 let model_name = (models.length == 1 && !model.name) ? "endpoint default" : model.name || 'Unnamed model';
-                
                 const item = document.createElement('li');
                 item.innerHTML = `
                     <a class="dropdown-item d-flex justify-content-between align-items-center" href="#" data-model-name="${model.name}">
                         <span>
-                            <i class="bi bi-check text-success me-2" style="display: none;"></i>
+                            <i class="bi bi-check text-success me-2" style="display: ${this.currentModel && this.currentModel.name === model.name ? 'inline-block' : 'none'}"></i>
                             ${model_name}
                         </span>
                         <i class="bi bi-x-circle text-danger delete-model hide showOnHover"></i>
@@ -105,7 +110,6 @@ class ModelManager {
                 this.dropdownMenu.appendChild(item);
             });
         }
-        this.updateCurrentModelCheckmark();
     }
     
     /**
@@ -135,8 +139,6 @@ class ModelManager {
         const items = this.dropdownMenu.querySelectorAll('.dropdown-item');
         const headers = this.dropdownMenu.querySelectorAll('.dropdown-header');
         
-        // headers.forEach(header => header.style.display = 'none');
-        
         items.forEach(item => {
             const modelName = item.dataset.modelName;
             const model = this.getModel(modelName);
@@ -148,9 +150,6 @@ class ModelManager {
                 
                 if (matchesSearch) {
                     const header = item.previousElementSibling;
-                    // if (header && header.classList.contains('dropdown-header')) {
-                    //     header.style.display = '';
-                    // }
                 }
             }
         });
@@ -198,7 +197,7 @@ class ModelManager {
         this.apiSpecInput.value = model.apiSpec || this.defaultAPISpec;
         this.handleAPIChange();
         this.hideDropdown();
-        this.updateCurrentModelCheckmark();
+        this.updateDropdownMenu();
     }
     
      /**
@@ -274,74 +273,10 @@ class ModelManager {
         }
     }
     
-    loadFields() {
-        return new Promise((resolve, reject) => {
-            chrome.storage.sync.get(['currentModel'], (result) => {
-                if (chrome.runtime.lastError) {
-                    reject(chrome.runtime.lastError);
-                } else {
-                    if (result.currentModel) {
-                        this.apiSpecInput.value = result.currentModel.apiSpecification || 'openai';
-                        this.modelInput.value = result.currentModel.name || '';
-                        this.endpointInput.value = result.currentModel.endpoint || '';
-                        this.apiKeyInput.value = result.currentModel.apiKey || '';
-                        document.getElementById('azure-api-version').value = result.currentModel.apiVersion || '';
-                        this.handleAPIChange();
-                        this.updateSearchInput(); // Add this line
-                    }
-                    resolve();
-                }
-            });
-        });
-    }
-
-    saveModelData() {
-        let currentModel = {
-            apiSpecification: this.apiSpecInput.value,
-            name: this.modelInput.value.trim(),
-            endpoint: this.endpointInput.value.trim(),
-            apiKey: this.apiKeyInput.value.trim()
-        };
-        
-        if (this.apiSpecInput.value === 'azure') {
-            currentModel.apiVersion = document.getElementById('azure-api-version').value.trim();
-        }
-
-        return new Promise((resolve, reject) => {
-            chrome.storage.sync.set({ currentModel }, () => {
-                if (chrome.runtime.lastError) {
-                    reject(chrome.runtime.lastError);
-                } else {
-                    this.saveModel();
-                    this.updateSearchInput(); // Add this line
-                    this.updateCurrentModelCheckmark(); // Add this line
-                    resolve();
-                }
-            });
-        });
-    }
-    
-    // Add this new method
     updateSearchInput() {
-        chrome.storage.sync.get(['currentModel'], (result) => {
-            if (result.currentModel && this.searchInput) {
-                this.searchInput.value = result.currentModel.name || '';
-            }
-        });
-    }
-
-    // Add this new method
-    updateCurrentModelCheckmark() {
-        const items = this.dropdownMenu.querySelectorAll('.dropdown-item');
-        items.forEach(item => {
-            const modelName = item.dataset.modelName;
-            const checkmark = item.querySelector('.bi-check');
-            if (this.currentModel && modelName === this.currentModel.name) {
-                checkmark.style.display = 'inline-block';
-            } else {
-                checkmark.style.display = 'none';
-            }
-        });
+        if (this.currentModel && this.searchInput) {
+            this.searchInput.value = this.currentModel.name || '';
+        }
     }
 
     getModel(name) {

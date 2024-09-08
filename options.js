@@ -13,9 +13,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     profileManager = new ProfileManager();
 
     // Load fields
-    await modelManager.loadFields();
+    await modelManager.init();
     await profileManager.init();
-    await profileManager.loadFields();
 
     // Load last active tab
     chrome.storage.session.get(['lastActiveTab'], function(result) {

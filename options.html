@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FormButler Options</title>
+    <link href="styles/bootstrap.min.css" rel="stylesheet">
+    <link href="styles/options.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>FormButler Options</h1>
+        <ul class="nav nav-tabs" id="optionsTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="llm-tab" data-bs-toggle="tab" data-bs-target="#llm" type="button" role="tab" aria-controls="llm" aria-selected="true">LLM Model</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="personal-tab" data-bs-toggle="tab" data-bs-target="#personal" type="button" role="tab" aria-controls="personal" aria-selected="false">Personal Info</button>
+            </li>
+        </ul>
+        <div class="tab-content" id="optionsTabsContent">
+            <div class="tab-pane fade show active" id="llm" role="tabpanel" aria-labelledby="llm-tab">
+                <form id="llm-form" class="options-form">
+                    <div class="dropdown form-group">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" id="model-search" class="form-control" placeholder="Search models">
+                        </div>
+                        <ul class="dropdown-menu" id="model-dropdown-menu">
+                            <!-- Dropdown items will be dynamically populated here -->
+                        </ul>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="model-input">API type</label>
+                        <select id="api-specification" class="form-select">
+                            <option value="openai">OpenAI</option>
+                            <option value="azure">Azure</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="model-input" id="model_input_label">Model name</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-robot"></i></span>
+                            <input type="text" id="model-input" class="form-control" placeholder="Model name">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="endpoint-input">Endpoint URL</label>
+                        <div class="input-group">
+                            <span class="input-group-text">@</span>
+                            <input type="text" id="endpoint-input" class="form-control" placeholder="Endpoint URL">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="api-key-input">API Key</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-key"></i></span>
+                            <input type="password" id="api-key-input" class="form-control" placeholder="API Key">
+                        </div>
+                    </div>
+
+                    <div class="form-group d-none" id="azure-api-version-div">
+                        <label for="azure-api-version">API Version</label>
+                        <input type="text" id="azure-api-version" class="form-control">
+                    </div>
+                </form>
+                <div class="row mt-3 align-items-center">
+                    <div class="col-auto">
+                        <button id="save-llm-button" class="btn btn-primary">Save LLM Settings</button>
+                    </div>
+                    <div class="col">
+                        <div id="llm-status" class="status-message hide"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="personal" role="tabpanel" aria-labelledby="personal-tab">
+                <form id="personal-form" class="options-form">
+                    <div class="dropdown form-group">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" id="profile-search" class="form-control" placeholder="Search profiles">
+                        </div>
+                        <ul class="dropdown-menu" id="profile-dropdown-menu">
+                            <!-- Dropdown items will be dynamically populated here -->
+                        </ul>
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-name" class="form-label">Profile Name</label>
+                        <input type="text" id="profile-name" class="form-control" placeholder="Enter profile name">
+                    </div>
+                    <div id="personalInfoForm">
+                        <!-- Personal info fields will be dynamically populated here -->
+                    </div>
+                    <button type="button" id="save-personal-button" class="btn btn-primary">Save Personal Info</button>
+                    <div id="personal-status" class="status-message mt-2"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script src="js/bootstrap.bundle.min.js"></script>
+    <script src="options.js"></script>
+    <script src="model-manager.js"></script>
+    <script src="personal-info-manager.js"></script>
+</body>
+</html>

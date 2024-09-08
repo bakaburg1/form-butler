@@ -1,0 +1,34 @@
+# Node.js dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Temporary files
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# IDE and editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Chrome Extension specific
+*.pem
+*.crx
+
+# Environment variables
+.env
+
+# Package manager files
+yarn-error.log
+npm-debug.log
+
+# Miscellaneous
+*.bak
+*.swp
+*~

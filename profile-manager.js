@@ -1,8 +1,8 @@
-class PersonalInfoManager {
+class ProfileManager {
     constructor() {
         this.currentProfile = null;
         this.profiles = [];
-        this.personalForm = null;
+        this.profileForm = null;
         this.profileSearchInput = null;
         this.profileDropdownMenu = null;
         this.profileNameInput = null;
@@ -22,11 +22,11 @@ class PersonalInfoManager {
         await this.saveProfiles();
         
         this.initializeUI();
-        this.updateSearchInput(); // Add this line
+        this.updateSearchInput();
     }
 
     initializeUI() {
-        this.personalForm = document.getElementById('personalInfoForm');
+        this.profileForm = document.getElementById('profileForm');
         this.profileSearchInput = document.getElementById('profile-search');
         this.profileDropdownMenu = document.getElementById('profile-dropdown-menu');
         this.profileNameInput = document.getElementById('profile-name');
@@ -35,13 +35,13 @@ class PersonalInfoManager {
         this.profileSearchInput.addEventListener('input', () => this.filterProfiles());
         this.profileDropdownMenu.addEventListener('click', (event) => this.onDropdownItemClick(event));
         document.addEventListener('click', (event) => this.handleClickOutside(event));
-        this.updateSearchInput(); // Add this line
+        this.updateSearchInput();
     }
 
     async loadFields() {
-        if (!this.personalForm) return;
+        if (!this.profileForm) return;
 
-        this.personalForm.innerHTML = '';
+        this.profileForm.innerHTML = '';
         this.profileNameInput.value = this.currentProfile.name;
 
         Object.values(this.currentProfile.info)
@@ -64,15 +64,15 @@ class PersonalInfoManager {
 
                 formGroup.appendChild(label);
                 formGroup.appendChild(input);
-                this.personalForm.appendChild(formGroup);
+                this.profileForm.appendChild(formGroup);
             });
 
         this.updateDropdownMenu();
-        this.updateSearchInput(); // Add this line at the end of the method
+        this.updateSearchInput();
     }
 
     async saveInfoData() {
-        if (!this.personalForm) return;
+        if (!this.profileForm) return;
 
         const profileName = this.profileNameInput.value.trim();
         if (!profileName) {
@@ -118,7 +118,7 @@ class PersonalInfoManager {
         });
     }
 
-    getDefaultPersonalInfo() {
+    getDefaultProfile() {
         return {
             firstName: { id: 'firstName', label: 'First Name', type: 'text', value: '', position: 1 },
             lastName: { id: 'lastName', label: 'Last Name', type: 'text', value: '', position: 2 },
@@ -138,7 +138,7 @@ class PersonalInfoManager {
         }
         return this.profiles.find(p => p.name === name) || {
             name: 'Default',
-            info: this.getDefaultPersonalInfo()
+            info: this.getDefaultProfile()
         };
     }
 
@@ -213,7 +213,7 @@ class PersonalInfoManager {
 
     selectProfile(profile) {
         this.currentProfile = profile;
-        this.updateSearchInput(); // Add this line
+        this.updateSearchInput();
         this.loadFields();
         this.hideDropdown();
     }
@@ -222,7 +222,7 @@ class PersonalInfoManager {
         this.profiles = this.profiles.filter(profile => profile.name !== profileToDelete.name);
         
         if (this.profiles.length === 0) {
-            this.profiles.push({name: 'Default', info: this.getDefaultPersonalInfo()});
+            this.profiles.push({name: 'Default', info: this.getDefaultProfile()});
         }
 
         if (this.currentProfile.name === profileToDelete.name) {
@@ -242,7 +242,6 @@ class PersonalInfoManager {
         }
     }
 
-    // Add this new method
     updateSearchInput() {
         if (this.currentProfile && this.profileSearchInput) {
             this.profileSearchInput.value = this.currentProfile.name;

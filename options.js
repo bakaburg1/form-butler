@@ -2,20 +2,20 @@
 
 // Declare global variables
 let modelManager;
-let personalInfoManager;
+let profileManager;
 
 document.addEventListener('DOMContentLoaded', async function() {
     const saveLLMButton = document.getElementById('save-llm-button');
-    const savePersonalButton = document.getElementById('save-personal-button');
+    const saveProfileButton = document.getElementById('save-profile-button');
 
     // Initialize managers
     modelManager = new ModelManager();
-    personalInfoManager = new PersonalInfoManager();
+    profileManager = new ProfileManager();
 
     // Load fields
     await modelManager.loadFields();
-    await personalInfoManager.init();
-    await personalInfoManager.loadFields();
+    await profileManager.init();
+    await profileManager.loadFields();
 
     // Load last active tab
     chrome.storage.session.get(['lastActiveTab'], function(result) {
@@ -35,18 +35,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     });
 
-    savePersonalButton.addEventListener('click', async function() {
-        savePersonalButton.disabled = true;
+    saveProfileButton.addEventListener('click', async function() {
+        saveProfileButton.disabled = true;
         try {
-            await personalInfoManager.saveInfoData();
-            updateStatus('personal');
+            await profileManager.saveInfoData();
+            updateStatus('profile');
         } catch (error) {
-            updateStatus('personal', error);
+            updateStatus('profile', error);
         }
     });
 
     // Add event listeners for tab changes
-    ['llm', 'personal'].forEach(tabId => {
+    ['llm', 'profile'].forEach(tabId => {
         const tab = document.getElementById(`${tabId}-tab`);
         tab.addEventListener('shown.bs.tab', () => {
             chrome.storage.session.set({ lastActiveTab: tabId });

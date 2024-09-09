@@ -4,15 +4,16 @@ let llmInterrogator;
 let profileManager;
 
 chrome.runtime.onInstalled.addListener(async () => {
-  // Initialize the LLMInterrogator when the extension is installed or updated
+  console.log('Extension installed or updated. Initializing...');
   await initializeLLMInterrogator();
   
-  // Initialize ProfileManager
   profileManager = new ProfileManager();
   await profileManager.init();
+  console.log('Initialization complete.');
 });
 
 async function initializeLLMInterrogator() {
+  console.log('Initializing LLMInterrogator...');
   const result = await chrome.storage.sync.get(['currentModel']);
   if (result.currentModel) {
     const model = result.currentModel;
@@ -24,18 +25,26 @@ async function initializeLLMInterrogator() {
       apiVersion: model.apiVersion
     };
     llmInterrogator = new LLMInterrogator(options);
+    console.log('LLMInterrogator initialized with model:', model.name);
+  } else {
+    console.log('No current model found. LLMInterrogator not initialized.');
   }
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('Received message:', request.action);
   if (request.action === "fillForm") {
     handleFormFill(request.formData, sendResponse);
+  } else if (request.action === "formFocused") {
+    handleFormFocused(request.formBody, request.formId, sendResponse);
   }
-  return true; // Indicates that the response is asynchronous
+  return true;
 });
 
 async function handleFormFill(formData, sendResponse) {
+  console.log('Handling form fill request');
   if (!llmInterrogator) {
+    console.error('LLM not configured');
     sendResponse({error: "LLM not configured"});
     return;
   }
@@ -47,12 +56,19 @@ async function handleFormFill(formData, sendResponse) {
       formData: formData,
       personalInfo: personalInfo
     });
+    console.log('Sending prompt to LLM');
     const response = await llmInterrogator.promptLLM([
       { role: "system", content: prompt },
       { role: "user", content: message }
     ]);
+    console.log('Received response from LLM');
     sendResponse({response: response.content[0]});
   } catch (error) {
+    console.error('Error in handleFormFill:', error);
+    sendResponse({error: error.message});
+  }
+}
+
 async function handleFormFocused(formBody, formId, sendResponse) {
   console.log('Handling form focused event for form:', formId);
   if (!llmInterrogator) {
@@ -88,6 +104,9 @@ async function handleFormFocused(formBody, formId, sendResponse) {
 }
 
 async function loadPrompt(promptType) {
+  console.log('Loading prompt:', promptType);
   const response = await fetch(chrome.runtime.getURL(`prompts/${promptType}.txt`));
-  return await response.text();
+  const promptText = await response.text();
+  console.log('Prompt loaded successfully');
+  return promptText;
 }

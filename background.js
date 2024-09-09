@@ -53,6 +53,36 @@ async function handleFormFill(formData, sendResponse) {
     ]);
     sendResponse({response: response.content[0]});
   } catch (error) {
+async function handleFormFocused(formBody, formId, sendResponse) {
+  console.log('Handling form focused event for form:', formId);
+  if (!llmInterrogator) {
+    console.error('LLM not configured');
+    sendResponse({error: "LLM not configured"});
+    return;
+  }
+
+  try {
+    const prompt = await loadPrompt('form_fill');
+    const personalInfo = profileManager.getProfile(null, true).info;
+    const message = JSON.stringify({
+      formBody: formBody,
+      personalInfo: personalInfo
+    });
+    console.log('Sending form data to LLM');
+    const response = await llmInterrogator.promptLLM([
+      { role: "system", content: prompt },
+      { role: "user", content: message }
+    ]);
+    console.log('Received response from LLM');
+
+    const llmResponse = JSON.parse(response.content[0]);
+    console.log('Parsed LLM response:', llmResponse);
+    sendResponse({
+      formId: formId,
+      fillInstructions: llmResponse
+    });
+  } catch (error) {
+    console.error('Error in handleFormFocused:', error);
     sendResponse({error: error.message});
   }
 }

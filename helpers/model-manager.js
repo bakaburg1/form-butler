@@ -202,7 +202,7 @@ class ModelManager {
      * @param {string|null} modelLabel - The label of the model to retrieve or null.
      * @returns {Object|null} The found model or null if not found.
      */
-    getModel(modelLabel) {
+    getModel(modelLabel = null) {
         if (modelLabel === null) {
             return this.currentModel;
         }

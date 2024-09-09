@@ -1,15 +1,15 @@
-importScripts('llm-interrogator.js', 'personal-info-manager.js');
+importScripts('llm-interrogator.js', 'profile-manager.js');
 
 let llmInterrogator;
-let personalInfoManager;
+let profileManager;
 
 chrome.runtime.onInstalled.addListener(async () => {
   // Initialize the LLMInterrogator when the extension is installed or updated
   await initializeLLMInterrogator();
   
-  // Initialize PersonalInfoManager
-  personalInfoManager = new PersonalInfoManager();
-  await personalInfoManager.init();
+  // Initialize ProfileManager
+  profileManager = new ProfileManager();
+  await profileManager.init();
 });
 
 async function initializeLLMInterrogator() {
@@ -42,7 +42,7 @@ async function handleFormFill(formData, sendResponse) {
 
   try {
     const prompt = await loadPrompt('form_fill');
-    const personalInfo = personalInfoManager.getProfile().info;
+    const personalInfo = profileManager.getProfile(null, true).info;
     const message = JSON.stringify({
       formData: formData,
       personalInfo: personalInfo

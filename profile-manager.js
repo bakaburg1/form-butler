@@ -147,26 +147,36 @@ class ProfileManager {
         };
     }
 
-    getProfile(name) {
+    getProfile(name, onlyWithValues = false) {
         if (!name) {
             return this.currentProfile;
         }
-        const profile = this.profiles.find(p => p.name === name);
-        if (profile) {
-            // Merge with default profile and sort by position
-            const mergedInfo = {...this.getDefaultProfile(), ...profile.info};
-            const sortedInfo = Object.fromEntries(
-                Object.entries(mergedInfo)
-                    .sort(([,a], [,b]) => a.position - b.position)
-            );
-            return {
-                name: profile.name,
-                info: sortedInfo
-            };
-        }
-        return {
+
+        const defaultProfile = {
             name: 'Default',
             info: this.getDefaultProfile()
+        };
+
+        const profile = this.profiles.find(p => p.name === name);
+        if (!profile) {
+            return onlyWithValues ? { name: 'Default', info: {} } : defaultProfile;
+        }
+
+        let mergedInfo = {...defaultProfile.info, ...profile.info};
+        
+        if (onlyWithValues) {
+            mergedInfo = Object.fromEntries(
+                Object.entries(mergedInfo).filter(([, field]) => field.value !== '')
+            );
+        }
+
+        const sortedInfo = Object.fromEntries(
+            Object.entries(mergedInfo).sort(([, a], [, b]) => a.position - b.position)
+        );
+
+        return {
+            name: profile.name,
+            info: sortedInfo
         };
     }
 

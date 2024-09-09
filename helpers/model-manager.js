@@ -46,6 +46,7 @@ class ModelManager {
         if (this.isOptionsPage()) {
             this.initializeDOMReferences();
             this.initializeEventListeners();
+            this.initializeModels();
             this.loadFields();
             this.updateSearchInput();
             this.updateDropdownMenu();
@@ -89,8 +90,9 @@ class ModelManager {
     }
 
     /**
-     * Saves the current model to the list of models and updates the storage. If
-     * a model with the same name and endpoint exists, it updates that model.
+     * Saves the current model to the list of models and updates the storage. 
+     *
+     * If a model with the same name and endpoint exists, it updates that model.
      * Otherwise, it adds a new model to the list.
      */
     saveModel() {
@@ -105,9 +107,9 @@ class ModelManager {
             apiKey: this.apiKeyInput.value.trim()
         };
         
-        const modelLabel = this.getModelLabel(newModel);
+        newModel.label = this.getModelLabel(newModel);
         
-        const existingIndex = this.models.findIndex(m => this.getModelLabel(m) === modelLabel);
+        const existingIndex = this.models.findIndex(m => m.label === newModel.label);
         
         if (existingIndex !== -1) {
             this.models[existingIndex] = newModel;
@@ -115,6 +117,7 @@ class ModelManager {
             this.models.push(newModel);
         }
         
+        this.currentModel = newModel; // Update currentModel
         this.saveModelsToStorage();
     }
 
@@ -133,7 +136,7 @@ class ModelManager {
         
         chrome.storage.sync.set({
             models: this.models,
-            currentModel: this.currentModel // Use currentModel here
+            currentModel: this.currentModel
         }, () => {
             let evt;
             
@@ -157,13 +160,12 @@ class ModelManager {
      * Deletes the specified model from the list of models and updates the
      * storage. After deleting, it updates the dropdown menu and filters the
      * models.
-     * @param {Object} modelToDelete - The model object to be deleted.
+     * @param {string} modelLabel - The label of the model to be deleted.
      */
-    deleteModel(modelToDelete) {
+    deleteModel(modelLabel) {
         if (!this.isOptionsPage()) return;
         
-        const labelToDelete = this.getModelLabel(modelToDelete);
-        this.models = this.models.filter(model => this.getModelLabel(model) !== labelToDelete);
+        this.models = this.models.filter(model => model.label !== modelLabel);
 
         this.saveModelsToStorage(() => {
             this.updateDropdownMenu();
@@ -172,49 +174,40 @@ class ModelManager {
     }
 
     /**
-     * Loads saved fields for the current model from Chrome's sync storage. If a
-     * current model exists, populates the UI fields with its data.
-     * @returns {Promise<void>}
+     * Loads saved fields for the current model. If a current model exists,
+     * populates the UI fields with its data.
      */
-    async loadFields() {
-        return new Promise((resolve) => {
-            chrome.storage.sync.get(['currentModel', 'models'], (result) => {
-                if (result.currentModel && result.models) {
-                    this.currentModel = result.currentModel;
-                    const currentModelDetails = result.models.find(model => 
-                        this.getModelLabel(model) === this.getModelLabel(this.currentModel)
-                    );
-                    
-                    // Populate UI fields with current model data
-                    if (this.isOptionsPage() && currentModelDetails) {
-                        this.apiSpecInput.value = currentModelDetails.apiSpec || 'openai';
-                        this.modelInput.value = currentModelDetails.name || '';
-                        this.endpointInput.value = currentModelDetails.endpoint || '';
-                        this.apiKeyInput.value = currentModelDetails.apiKey || '';
-                        document.getElementById('azure-api-version').value = currentModelDetails.apiVersion || '';
-                        this.handleAPIChange(); // Update UI based on API specification
-                    }
-                }
-                resolve();
-            });
-        });
+    loadFields() {
+        if (!this.isOptionsPage()) return;
+
+        if (this.currentModel && this.models.length > 0) {
+            const currentModelDetails = this.models.find(model => 
+                model.label === this.currentModel.label
+            );
+            
+            if (currentModelDetails) {
+                this.apiSpecInput.value = currentModelDetails.apiSpec || 'openai';
+                this.modelInput.value = currentModelDetails.name || '';
+                this.endpointInput.value = currentModelDetails.endpoint || '';
+                this.apiKeyInput.value = currentModelDetails.apiKey || '';
+                document.getElementById('azure-api-version').value = currentModelDetails.apiVersion || '';
+                this.handleAPIChange(); // Update UI based on API specification
+            }
+        }
     }
 
     /**
      * Retrieves a model by label or returns the current model if no label is
      * provided.
-     * @param {string} [labelOrModel] - The label of the model to retrieve or the model object itself.
+     * @param {string|null} modelLabel - The label of the model to retrieve or null.
      * @returns {Object|null} The found model or null if not found.
      */
-    getModel(labelOrModel) {
-        if (!labelOrModel) {
+    getModel(modelLabel) {
+        if (modelLabel === null) {
             return this.currentModel;
         }
-        if (typeof labelOrModel === 'object') {
-            return labelOrModel;
-        }
         // Find and return the model with the matching label
-        return this.models.find(m => this.getModelLabel(m) === labelOrModel) || null;
+        return this.models.find(m => m.label === modelLabel) || null;
     }
     
     /**
@@ -266,10 +259,10 @@ class ModelManager {
                 let model_name = (models.length == 1 && !model.name) ? "endpoint default" : model.name || 'Unnamed model';
                 const item = document.createElement('li');
                 
-                let checkIconDisplay = this.currentModel && this.getModelLabel(model) === this.getModelLabel(this.currentModel) ? 'inline-block' : 'none';
+                let checkIconDisplay = this.currentModel && model.label === this.currentModel.label ? 'inline-block' : 'none';
 
                 item.innerHTML = `
-                    <a class="dropdown-item d-flex justify-content-between align-items-center" href="#" data-model-label="${this.getModelLabel(model)}">
+                    <a class="dropdown-item d-flex justify-content-between align-items-center" href="#" data-model-label="${model.label}">
                         <span>
                             <i class="bi bi-check text-success me-2" style="display: ${checkIconDisplay}"></i>
                             ${model_name}
@@ -343,17 +336,11 @@ class ModelManager {
             event.preventDefault();
             event.stopPropagation();
             const modelLabel = model_item.dataset.modelLabel;
-            const model = this.getModel(modelLabel);
-            if (model) {
-                this.deleteModel(model);
-            }
+            this.deleteModel(modelLabel);
         } else {
             if (model_item) {
                 const modelLabel = model_item.dataset.modelLabel;
-                const model = this.getModel(modelLabel);
-                if (model) {
-                    this.selectModel(model);
-                }
+                this.selectModel(modelLabel);
             }
         }
     }
@@ -361,10 +348,13 @@ class ModelManager {
     /**
      * Selects the specified model and updates the form fields accordingly. This
      * method is called when a user clicks on a model in the dropdown menu.
-     * @param {Object} model - The model object to be selected.
+     * @param {string} modelLabel - The label of the model to be selected.
      */
-    selectModel(model) {
+    selectModel(modelLabel) {
         if (!this.isOptionsPage()) return;
+        const model = this.getModel(modelLabel);
+        if (!model) return;
+
         this.currentModel = model;
         // Update UI fields with selected model data
         this.searchInput.value = model.name;
@@ -431,5 +421,14 @@ class ModelManager {
      */
     getModelLabel(model) {
         return `${model.endpoint}|${model.name}`;
+    }
+
+    initializeModels() {
+        this.models = this.models.map(model => {
+            if (!model.label) {
+                model.label = this.getModelLabel(model);
+            }
+            return model;
+        });
     }
 }

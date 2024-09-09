@@ -1,4 +1,4 @@
-importScripts('llm-interrogator.js', 'profile-manager.js');
+importScripts('helpers/llm-interrogator.js', 'helpers/profile-manager.js');
 
 let llmInterrogator;
 let profileManager;

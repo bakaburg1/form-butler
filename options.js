@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     saveLLMButton.addEventListener('click', async function() {
         saveLLMButton.disabled = true;
         try {
-            await modelManager.saveModelData();
+            await modelManager.saveModel();
             updateStatus('llm');
         } catch (error) {
             updateStatus('llm', error);

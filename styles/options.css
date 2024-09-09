@@ -73,3 +73,17 @@ h1 {
 .delete-model:hover {
     color: #dc3545;
 }
+
+#add-field-button {
+    cursor: pointer;
+}
+
+#add-field-button:hover {
+    color: #28a745;
+}
+
+.custom-field[contenteditable="true"]:empty::before {
+    content: attr(data-placeholder);
+    color: #6c757d;
+}
+

@@ -26,7 +26,6 @@ class ProfileManager {
         this.profileSearchInput = null;
         this.profileDropdownMenu = null;
         this.profileNameInput = null;
-        this.init();
     }
 
     /**
@@ -45,8 +44,8 @@ class ProfileManager {
             this.profiles.push(this.getProfile('Default'));
         }
         
-        // Set the current profile to the stored one or create a new default
-        this.currentProfile = this.getProfile(currentProfileName);
+        // Set the current profile name
+        this.currentProfile = currentProfileName;
         await this.saveProfiles();
         
         // Initialize UI components and load form fields
@@ -59,18 +58,32 @@ class ProfileManager {
      * Set up event listeners and initialize UI elements
      */
     initializeUI() {
+        console.log('ProfileManager initializeUI() called');
         // Get references to DOM elements
         this.profileForm = document.getElementById('profileForm');
         this.profileSearchInput = document.getElementById('profile-search');
         this.profileDropdownMenu = document.getElementById('profile-dropdown-menu');
         this.profileNameInput = document.getElementById('profile-name');
+        this.addFieldButton = document.getElementById('add-field-button');
 
         // Set up event listeners for user interactions
         this.profileSearchInput.addEventListener('focus', () => this.showDropdown());
         this.profileSearchInput.addEventListener('input', () => this.filterProfiles());
         this.profileDropdownMenu.addEventListener('click', (event) => this.onDropdownItemClick(event));
-        document.addEventListener('click', (event) => this.handleClickOutside(event));
+        this.addFieldButton.addEventListener('click', (event) => this.addField());
+        document.addEventListener('click', () => this.handleClickOutside(event));
         this.updateSearchInput();
+
+        // Add delegate event listener for deleting custom fields
+        this.profileForm.addEventListener('click', (event) => {
+            const deleteButton = event.target.closest('.delete-custom-field');
+            if (deleteButton) {
+                const formGroup = deleteButton.closest('.form-group');
+                if (formGroup) {
+                    formGroup.remove();
+                }
+            }
+        });
     }
 
     /**
@@ -82,40 +95,38 @@ class ProfileManager {
 
         // Clear existing form fields
         this.profileForm.innerHTML = '';
-        this.profileNameInput.value = this.currentProfile.name;
+        this.profileNameInput.value = this.currentProfile;
+
+        // Get the current profile data
+        const currentProfileData = this.getProfile(this.currentProfile);
 
         // Merge current profile with default profile to ensure all fields are present
-        const mergedProfile = {...this.getDefaultProfile(), ...this.currentProfile.info};
+        const mergedProfile = {...this.getDefaultProfile(), ...currentProfileData.info};
 
-        // Sort fields by position and create form elements
-        Object.values(mergedProfile)
+        // Separate default fields and custom fields
+        const defaultFields = [];
+        const customFields = [];
+
+        Object.values(mergedProfile).forEach(field => {
+            if (field.isCustomField) {
+                customFields.push(field);
+            } else {
+                defaultFields.push(field);
+            }
+        });
+
+        // Sort and add default fields
+        defaultFields
             .sort((a, b) => a.position - b.position)
             .forEach(field => {
-                // Create form group container
-                const formGroup = document.createElement('div');
-                formGroup.className = 'form-group';
+                this.addField(field);
+            });
 
-                // Create label for the field
-                const label = document.createElement('label');
-                label.htmlFor = field.id;
-                label.className = 'form-label';
-                label.textContent = field.label;
-
-                // Create input element
-                const input = document.createElement('input');
-                input.type = field.type;
-                input.className = 'form-control';
-                input.id = field.id;
-                input.name = field.id;
-                input.value = field.value;
-                if (field.placeholder) {
-                    input.placeholder = field.placeholder;
-                }
-
-                // Append label and input to form group
-                formGroup.appendChild(label);
-                formGroup.appendChild(input);
-                this.profileForm.appendChild(formGroup);
+        // Add custom fields at the end
+        customFields
+            .sort((a, b) => a.position - b.position)
+            .forEach(field => {
+                this.addField(field);
             });
 
         // Update UI components
@@ -127,7 +138,7 @@ class ProfileManager {
      * Save the current profile information
      * Updates the current profile or creates a new one if the name has changed
      */
-    async saveInfoData() {
+    async saveProfileData() {
         if (!this.profileForm) return;
 
         // Get the profile name from the input field
@@ -140,29 +151,37 @@ class ProfileManager {
         const updatedInfo = {};
         const inputs = this.profileForm.querySelectorAll('input');
         inputs.forEach(input => {
-            if (input.value.trim() !== '') {
+            const label = input.previousElementSibling.querySelector('label');
+            const isCustomField = label && label.classList.contains('custom-field');
+            
+            if (isCustomField || input.value.trim() !== '') {
                 updatedInfo[input.id] = {
                     id: input.id,
-                    label: input.previousElementSibling.textContent,
+                    label: label.textContent,
                     type: input.type,
                     value: input.value.trim(),
-                    position: parseInt(input.dataset.position) || 0
+                    position: parseInt(input.dataset.position) || 0,
+                    isCustomField: isCustomField
                 };
             }
         });
 
         // Update existing profile or create a new one
-        if (profileName === this.currentProfile.name) {
-            this.currentProfile.info = updatedInfo;
-        } else {
+        // if (profileName === this.currentProfile) {
+        //     const currentProfileData = this.getProfile(this.currentProfile, true);
+        //     currentProfileData.info = updatedInfo;
+        // } else {
+            // Search for the edited profile
             const existingProfileIndex = this.profiles.findIndex(p => p.name === profileName);
             if (existingProfileIndex !== -1) {
+                // Update existing profile
                 this.profiles[existingProfileIndex] = {name: profileName, info: updatedInfo};
             } else {
+                // Create new profile
                 this.profiles.push({name: profileName, info: updatedInfo});
             }
-            this.currentProfile = {name: profileName, info: updatedInfo};
-        }
+            this.currentProfile = profileName;
+        // }
 
         // Save profiles and update UI
         await this.saveProfiles();
@@ -176,13 +195,17 @@ class ProfileManager {
     async saveProfiles() {
         // Save profiles to Chrome storage
         return new Promise((resolve, reject) => {
+            console.log('Saving profiles to Chrome storage:', this.profiles);
+            console.log('Saving current profile:', this.currentProfile);
+
             chrome.storage.sync.set({ 
                 profiles: this.profiles,
-                currentProfile: this.currentProfile.name
+                currentProfile: this.currentProfile
             }, () => {
                 if (chrome.runtime.lastError) {
                     reject(chrome.runtime.lastError);
                 } else {
+                    this.updateSearchInput();
                     resolve();
                 }
             });
@@ -198,15 +221,15 @@ class ProfileManager {
         return {
             firstName: { id: 'firstName', label: 'First Name', type: 'text', value: '', position: 1 },
             lastName: { id: 'lastName', label: 'Last Name', type: 'text', value: '', position: 2 },
-            age: { id: 'age', label: 'Age', type: 'number', value: '', position: 3 },
-            address: { id: 'address', label: 'Address', type: 'text', value: '', position: 4 },
-            city: { id: 'city', label: 'City', type: 'text', value: '', position: 5 },
-            region: { id: 'region', label: 'Region/State/Province', type: 'text', value: '', position: 6 },
-            postalCode: { id: 'postalCode', label: 'Postal Code', type: 'text', value: '', position: 7 },
-            country: { id: 'country', label: 'Country', type: 'text', value: '', position: 8 },
-            email: { id: 'email', label: 'Email', type: 'email', value: '', position: 9 },
-            phone: { id: 'phone', label: 'Phone', type: 'tel', value: '', position: 10 },
-            birthDate: { id: 'birthDate', label: 'Birth Date', type: 'date', value: '', position: 11, placeholder: 'YYYY-MM-DD' }
+            address: { id: 'address', label: 'Address', type: 'text', value: '', position: 3 },
+            city: { id: 'city', label: 'City', type: 'text', value: '', position: 4 },
+            region: { id: 'region', label: 'Region/State/Province', type: 'text', value: '', position: 5 },
+            postalCode: { id: 'postalCode', label: 'Postal Code', type: 'text', value: '', position: 6 },
+            country: { id: 'country', label: 'Country', type: 'text', value: '', position: 7 },
+            email: { id: 'email', label: 'Email', type: 'email', value: '', position: 8 },
+            phone: { id: 'phone', label: 'Phone', type: 'tel', value: '', position: 9 },
+            birthDate: { id: 'birthDate', label: 'Birth Date', type: 'date', value: '', position: 10, placeholder: 'YYYY-MM-DD' },
+            age: { id: 'age', label: 'Age', type: 'number', value: '', position: 11 }
         };
     }
 
@@ -218,7 +241,7 @@ class ProfileManager {
      */
     getProfile(name, onlyWithValues = false) {
         if (!name) {
-            return this.currentProfile;
+            return this.getProfile(this.currentProfile);
         }
 
         // Define default profile
@@ -287,7 +310,7 @@ class ProfileManager {
             // Add checkmark for current profile inside the nameSpan
             const checkmark = document.createElement('i');
             checkmark.className = 'bi bi-check text-success me-2';
-            checkmark.style.display = profile.name === this.currentProfile.name ? 'inline-block' : 'none';
+            checkmark.style.display = profile.name === this.currentProfile ? 'inline-block' : 'none';
 
             nameSpan.appendChild(checkmark);
             nameSpan.appendChild(document.createTextNode(profile.name));
@@ -350,7 +373,7 @@ class ProfileManager {
      * @param {Object} profile - The profile to select
      */
     selectProfile(profile) {
-        this.currentProfile = profile;
+        this.currentProfile = profile.name;
         this.updateSearchInput();
         this.loadFields();
         this.hideDropdown();
@@ -367,8 +390,8 @@ class ProfileManager {
             this.profiles.push({name: 'Default', info: this.getDefaultProfile()});
         }
 
-        if (this.currentProfile.name === profileToDelete.name) {
-            this.currentProfile = this.profiles[0];
+        if (this.currentProfile === profileToDelete.name) {
+            this.currentProfile = this.profiles[0].name;
         }
 
         await this.saveProfiles();
@@ -393,7 +416,104 @@ class ProfileManager {
      */
     updateSearchInput() {
         if (this.currentProfile && this.profileSearchInput) {
-            this.profileSearchInput.value = this.currentProfile.name;
+            this.profileSearchInput.value = this.currentProfile;
+        }
+    }
+
+    /**
+     * Add a new field to the profile form
+     */
+    addField(field = null) {
+
+        // Determine if the field is a custom field
+        let isCustomField;
+        if (field === null) {
+            isCustomField = true;
+        } else if (field.isCustomField !== undefined) {
+            isCustomField = field.isCustomField;
+        } else {
+            isCustomField = false;
+        }
+
+        // Create the form group container
+        const formGroup = document.createElement('div');
+        formGroup.className = 'form-group';
+
+        // Create the label container
+        const labelContainer = document.createElement('div');
+
+        const CustomFieldClass = isCustomField ? ' custom-field' : '';
+
+        // Create the label
+        const label = document.createElement('label');
+        label.className = 'form-label' + CustomFieldClass;
+        if (isCustomField) {
+            label.contentEditable = true;
+            label.setAttribute('data-placeholder', 'Insert field label here');
+        }
+        label.textContent = field ? field.label : '';
+
+        // Append label to label container
+        labelContainer.appendChild(label);
+
+        // Create the delete button for custom fields
+        if (isCustomField) {
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'btn btn-link p-0 ms-1 delete-custom-field';
+            deleteButton.innerHTML = '<i class="bi bi-x-circle text-danger"></i>';
+            deleteButton.title = 'Delete custom field';
+            deleteButton.tabIndex = -1;
+            labelContainer.appendChild(deleteButton);
+        }
+
+        // Create the input
+        const input = document.createElement('input');
+        input.type = field ? field.type : 'text';
+        input.className = 'form-control' + CustomFieldClass;
+        input.id = field ? field.id : '';
+        input.name = field ? field.id : '';
+        input.value = field ? field.value : '';
+        if (field && field.placeholder) {
+            input.placeholder = field.placeholder;
+        }
+
+        // Function to generate a sanitized, camelized ID from the label text
+        const generateFieldId = (text) => {
+            // Convert the text to camelCase
+            return text.replace(/[^a-zA-Z0-9]+(.)/g, (m, chr) => chr.toUpperCase())
+                       // Remove all non-alphanumeric characters
+                       .replace(/[^a-zA-Z0-9]/g, '')
+                       .replace(/^[a-z]/, chr => chr.toLowerCase());
+        };
+
+        // Function to update the input's ID based on the label's content
+        const updateFieldId = () => {
+            const sanitizedId = generateFieldId(label.textContent);
+            input.id = sanitizedId;
+            input.name = sanitizedId;
+        };
+
+        // Add event listeners for custom field label editing
+        if (isCustomField) {
+            label.addEventListener('input', updateFieldId);
+            label.addEventListener('blur', () => {
+                updateFieldId();
+                if (label.textContent.trim() === '') {
+                    label.textContent = '';  // Ensure it's empty to show the placeholder
+                }
+            });
+        }
+
+        // Append label container and input to form group
+        formGroup.appendChild(labelContainer);
+        formGroup.appendChild(input);
+
+        // Append the new form group to the profile form
+        this.profileForm.appendChild(formGroup);
+
+        // Focus on the new label for immediate editing if it's a new custom field
+        if (isCustomField && !field) {
+            label.focus();
         }
     }
 }

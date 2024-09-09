@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "description": "An LLM powered chrome extension to simplify filling forms in websites.",
   "permissions": [
-    "storage",
-    "activeTab"
+    "activeTab",
+    "storage"
   ],
   "host_permissions": [
     "https://api.openai.com/*",
@@ -19,9 +19,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "css" : ["styles/content.css"],
-      "run_at": "document_end"
+      "js": ["content.js"]
     }
   ],
   "action": {

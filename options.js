@@ -24,24 +24,21 @@ document.addEventListener('DOMContentLoaded', async function() {
         tab.show();
     });
 
-    saveLLMButton.addEventListener('click', async function() {
-        saveLLMButton.disabled = true;
-        try {
-            await modelManager.saveModel();
-            updateStatus('llm');
-        } catch (error) {
-            updateStatus('llm', error);
-        }
+    // Add event listeners for custom save events
+    document.addEventListener('llmSaved', () => {
+        updateStatus('llm');
     });
 
-    saveProfileButton.addEventListener('click', async function() {
-        saveProfileButton.disabled = true;
-        try {
-            await profileManager.saveProfileData();
-            updateStatus('profile');
-        } catch (error) {
-            updateStatus('profile', error);
-        }
+    document.addEventListener('llmSavingError', (event) => {
+        updateStatus('llm', event.detail.error);
+    });
+
+    document.addEventListener('profileSaved', () => {
+        updateStatus('profile');
+    });
+
+    document.addEventListener('profileSavingError', (event) => {
+        updateStatus('profile', event.detail.error);
     });
 
     // Add event listeners for tab changes

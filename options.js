@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     saveProfileButton.addEventListener('click', async function() {
         saveProfileButton.disabled = true;
         try {
-            await profileManager.saveInfoData();
+            await profileManager.saveProfileData();
             updateStatus('profile');
         } catch (error) {
             updateStatus('profile', error);

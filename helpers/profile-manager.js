@@ -56,7 +56,6 @@ class ProfileManager {
     
     initializeDOMReferences() {
         if (!this.isOptionsPage()) return;
-        console.log('ProfileManager initializeDOMReferences() called');
         
         this.profileForm = document.getElementById('profileForm');
         this.profileSearchInput = document.getElementById('profile-search');
@@ -68,7 +67,6 @@ class ProfileManager {
     
     initializeEventListeners() {
         if (!this.isOptionsPage()) return;
-        console.log('ProfileManager initializeEventListeners() called');
 
         this.profileSearchInput.addEventListener('focus', () => this.showDropdown());
         this.profileSearchInput.addEventListener('input', () => this.filterProfiles());

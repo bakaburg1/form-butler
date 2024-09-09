@@ -51,7 +51,6 @@ class ProfileManager {
             this.initializeDOMReferences();
             this.initializeEventListeners();
             this.loadFields();
-            this.updateSearchInput();
         }
     }
     

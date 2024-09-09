@@ -16,13 +16,13 @@ class ModelManager {
      */
     constructor() {
         // DOM element references
-        this.apiSpecInput = document.getElementById('api-specification');
-        this.searchInput = document.getElementById('model-search');
-        this.dropdownMenu = document.getElementById('model-dropdown-menu');
-        this.modelInput = document.getElementById('model-input');
-        this.endpointInput = document.getElementById('endpoint-input');
-        this.apiKeyInput = document.getElementById('api-key-input');
-        this.saveButton = document.getElementById('save-llm-button');
+        this.apiSpecInput = null;
+        this.searchInput = null;
+        this.dropdownMenu = null;
+        this.modelInput = null;
+        this.endpointInput = null;
+        this.apiKeyInput = null;
+        this.saveButton = null;
 
         // Default values and state variables
         this.defaultAPISpec = 'openai';
@@ -44,9 +44,33 @@ class ModelManager {
     async init() {
         await this.loadModels();
         await this.loadFields();
-        this.initializeEventListeners();
-        this.updateSearchInput();
-        this.updateDropdownMenu();
+        if (this.isOptionsPage()) {
+            this.initializeDOMReferences();
+            this.initializeEventListeners();
+            this.updateSearchInput();
+            this.updateDropdownMenu();
+        }
+    }
+
+    /**
+     * Checks if the current page is the options page.
+     * @returns {boolean} True if the current page is the options page, false otherwise.
+     */
+    isOptionsPage() {
+        return location.pathname.includes('options.html');
+    }
+
+    /**
+     * Initializes DOM element references for the options page.
+     */
+    initializeDOMReferences() {
+        this.apiSpecInput = document.getElementById('api-specification');
+        this.searchInput = document.getElementById('model-search');
+        this.dropdownMenu = document.getElementById('model-dropdown-menu');
+        this.modelInput = document.getElementById('model-input');
+        this.endpointInput = document.getElementById('endpoint-input');
+        this.apiKeyInput = document.getElementById('api-key-input');
+        this.saveButton = document.getElementById('save-llm-button');
     }
 
     /**
@@ -74,12 +98,14 @@ class ModelManager {
                 if (result.currentModel) {
                     this.currentModel = result.currentModel;
                     // Populate UI fields with current model data
-                    this.apiSpecInput.value = this.currentModel.apiSpecification || 'openai';
-                    this.modelInput.value = this.currentModel.name || '';
-                    this.endpointInput.value = this.currentModel.endpoint || '';
-                    this.apiKeyInput.value = this.currentModel.apiKey || '';
-                    document.getElementById('azure-api-version').value = this.currentModel.apiVersion || '';
-                    this.handleAPIChange(); // Update UI based on API specification
+                    if (this.isOptionsPage()) {
+                        this.apiSpecInput.value = this.currentModel.apiSpecification || 'openai';
+                        this.modelInput.value = this.currentModel.name || '';
+                        this.endpointInput.value = this.currentModel.endpoint || '';
+                        this.apiKeyInput.value = this.currentModel.apiKey || '';
+                        document.getElementById('azure-api-version').value = this.currentModel.apiVersion || '';
+                        this.handleAPIChange(); // Update UI based on API specification
+                    }
                 }
                 resolve();
             });
@@ -106,6 +132,7 @@ class ModelManager {
      * menu, save button, and API specification changes.
      */
     initializeEventListeners() {
+        if (!this.isOptionsPage()) return;
         this.searchInput.addEventListener('focus', () => this.showDropdown());
         this.searchInput.addEventListener('input', () => this.filterModels());
         this.dropdownMenu.addEventListener('click', (event) => this.onDropdownItemClick(event));
@@ -119,6 +146,7 @@ class ModelManager {
      * to 'block'. This method is called when the search input receives focus.
      */
     showDropdown() {
+        if (!this.isOptionsPage()) return;
         this.updateDropdownMenu(); // Ensure the dropdown content is up-to-date
         this.dropdownMenu.style.display = 'block';
     }
@@ -129,6 +157,7 @@ class ModelManager {
      * a model.
      */
     hideDropdown() {
+        if (!this.isOptionsPage()) return;
         this.dropdownMenu.style.display = 'none';
     }
     
@@ -139,6 +168,7 @@ class ModelManager {
      * selection indicators and delete buttons.
      */
     updateDropdownMenu() {
+        if (!this.isOptionsPage()) return;
         this.dropdownMenu.innerHTML = ''; // Clear existing content
         const groupedModels = this.groupModelsByEndpoint();
         
@@ -152,10 +182,13 @@ class ModelManager {
                 // Determine the display name for the model
                 let model_name = (models.length == 1 && !model.name) ? "endpoint default" : model.name || 'Unnamed model';
                 const item = document.createElement('li');
+                
+                let checkIconDisplay = this.currentModel && this.currentModel.name === model.name ? 'inline-block' : 'none';
+
                 item.innerHTML = `
                     <a class="dropdown-item d-flex justify-content-between align-items-center" href="#" data-model-name="${model.name}">
                         <span>
-                            <i class="bi bi-check text-success me-2" style="display: ${this.currentModel && this.currentModel.name === model.name ? 'inline-block' : 'none'}"></i>
+                            <i class="bi bi-check text-success me-2" style="display: ${checkIconDisplay}"></i>
                             ${model_name}
                         </span>
                         <i class="bi bi-x-circle text-danger delete-model hide showOnHover"></i>
@@ -189,6 +222,7 @@ class ModelManager {
      * input, providing real-time filtering.
      */
     filterModels() {
+        if (!this.isOptionsPage()) return;
         const searchTerm = this.searchInput.value.toLowerCase().trim();
         const items = this.dropdownMenu.querySelectorAll('.dropdown-item');
         const headers = this.dropdownMenu.querySelectorAll('.dropdown-header');
@@ -219,6 +253,7 @@ class ModelManager {
      * @param {Event} event - The click event object.
      */
     onDropdownItemClick(event) {
+        if (!this.isOptionsPage()) return;
         const model_item = event.target.closest('.dropdown-item');
 
         if (event.target.classList.contains('delete-model')) {
@@ -246,6 +281,7 @@ class ModelManager {
      * @param {Object} model - The model object to be selected.
      */
     selectModel(model) {
+        if (!this.isOptionsPage()) return;
         this.currentModel = model;
         // Update UI fields with selected model data
         this.searchInput.value = model.name;
@@ -264,6 +300,7 @@ class ModelManager {
      * Otherwise, it adds a new model to the list.
      */
     saveModel() {
+        if (!this.isOptionsPage()) return;
         const newModel = {
             name: this.modelInput.value.trim(),
             endpoint: this.endpointInput.value.trim(),
@@ -293,6 +330,7 @@ class ModelManager {
      * @param {Object} modelToDelete - The model object to be deleted.
      */
     deleteModel(modelToDelete) {
+        if (!this.isOptionsPage()) return;
         this.models = this.models.filter(model => 
             !(model.name === modelToDelete.name && model.endpoint === modelToDelete.endpoint)
         );
@@ -313,6 +351,7 @@ class ModelManager {
      * @param {Event} event - The click event that triggered this function.
      */
     handleClickOutside(event) {
+        if (!this.isOptionsPage()) return;
         if (!this.searchInput.contains(event.target) && !this.dropdownMenu.contains(event.target)) {
             this.hideDropdown();
         }
@@ -325,6 +364,7 @@ class ModelManager {
      * specification.
      */
     handleAPIChange() {
+        if (!this.isOptionsPage()) return;
         let azureFields = document.getElementById('azure-fields')
         let modelInputLabel = document.getElementById('model_input_label')
         let apiVersionInput = document.getElementById('azure-api-version-div')
@@ -343,7 +383,8 @@ class ModelManager {
      * typically called after loading a model or changing the current model.
      */
     updateSearchInput() {
-        if (this.currentModel && this.searchInput) {
+        if (!this.isOptionsPage() || !this.searchInput) return;
+        if (this.currentModel) {
             this.searchInput.value = this.currentModel.name || '';
         }
     }

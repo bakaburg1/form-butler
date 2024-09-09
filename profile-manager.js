@@ -45,7 +45,10 @@ class ProfileManager {
         this.profileForm.innerHTML = '';
         this.profileNameInput.value = this.currentProfile.name;
 
-        Object.values(this.currentProfile.info)
+        // Merge current profile with default profile
+        const mergedProfile = {...this.getDefaultProfile(), ...this.currentProfile.info};
+
+        Object.values(mergedProfile)
             .sort((a, b) => a.position - b.position)
             .forEach(field => {
                 const formGroup = document.createElement('div');
@@ -62,6 +65,9 @@ class ProfileManager {
                 input.id = field.id;
                 input.name = field.id;
                 input.value = field.value;
+                if (field.placeholder) {
+                    input.placeholder = field.placeholder;
+                }
 
                 formGroup.appendChild(label);
                 formGroup.appendChild(input);
@@ -81,10 +87,16 @@ class ProfileManager {
         }
 
         const updatedInfo = {};
-        Object.keys(this.currentProfile.info).forEach(key => {
-            const element = document.getElementById(key);
-            if (element) {
-                updatedInfo[key] = {...this.currentProfile.info[key], value: element.value};
+        const inputs = this.profileForm.querySelectorAll('input');
+        inputs.forEach(input => {
+            if (input.value.trim() !== '') {
+                updatedInfo[input.id] = {
+                    id: input.id,
+                    label: input.previousElementSibling.textContent,
+                    type: input.type,
+                    value: input.value.trim(),
+                    position: parseInt(input.dataset.position) || 0
+                };
             }
         });
 
@@ -137,7 +149,20 @@ class ProfileManager {
         if (!name) {
             return this.currentProfile;
         }
-        return this.profiles.find(p => p.name === name) || {
+        const profile = this.profiles.find(p => p.name === name);
+        if (profile) {
+            // Merge with default profile and sort by position
+            const mergedInfo = {...this.getDefaultProfile(), ...profile.info};
+            const sortedInfo = Object.fromEntries(
+                Object.entries(mergedInfo)
+                    .sort(([,a], [,b]) => a.position - b.position)
+            );
+            return {
+                name: profile.name,
+                info: sortedInfo
+            };
+        }
+        return {
             name: 'Default',
             info: this.getDefaultProfile()
         };

@@ -1,5 +1,25 @@
+/**
+ * ProfileManager class
+ *
+ * This class manages user profiles for a Chrome extension, handling profile
+ * creation, selection, deletion, and data persistence. It provides a user
+ * interface for profile management and form field population based on the
+ * selected profile.
+ *
+ * Key features:
+ * - Profile CRUD operations
+ * - Chrome storage synchronization
+ * - Dynamic form generation
+ * - Profile search and filtering
+ * - Default profile handling
+ */
 class ProfileManager {
+    /**
+     * Initialize the ProfileManager
+     * Sets up initial state and triggers the initialization process
+     */
     constructor() {
+        // Initialize properties to null or empty arrays
         this.currentProfile = null;
         this.profiles = [];
         this.profileForm = null;
@@ -9,29 +29,43 @@ class ProfileManager {
         this.init();
     }
 
+    /**
+     * Initialize the ProfileManager
+     * Loads profiles from Chrome storage, sets up the current profile,
+     * and initializes the user interface
+     */
     async init() {
+        // Retrieve stored profiles and current profile from Chrome storage
         const result = await chrome.storage.sync.get(['profiles', 'currentProfile']);
         this.profiles = result.profiles || [];
         const currentProfileName = result.currentProfile || 'Default';
         
+        // Ensure there's at least a default profile
         if (this.profiles.length === 0) {
             this.profiles.push(this.getProfile('Default'));
         }
         
+        // Set the current profile to the stored one or create a new default
         this.currentProfile = this.getProfile(currentProfileName);
         await this.saveProfiles();
         
+        // Initialize UI components and load form fields
         this.initializeUI();
         this.loadFields();
         this.updateSearchInput();
     }
 
+    /**
+     * Set up event listeners and initialize UI elements
+     */
     initializeUI() {
+        // Get references to DOM elements
         this.profileForm = document.getElementById('profileForm');
         this.profileSearchInput = document.getElementById('profile-search');
         this.profileDropdownMenu = document.getElementById('profile-dropdown-menu');
         this.profileNameInput = document.getElementById('profile-name');
 
+        // Set up event listeners for user interactions
         this.profileSearchInput.addEventListener('focus', () => this.showDropdown());
         this.profileSearchInput.addEventListener('input', () => this.filterProfiles());
         this.profileDropdownMenu.addEventListener('click', (event) => this.onDropdownItemClick(event));
@@ -39,26 +73,35 @@ class ProfileManager {
         this.updateSearchInput();
     }
 
+    /**
+     * Load and display form fields based on the current profile
+     * Merges the current profile with the default profile to ensure all fields are present
+     */
     async loadFields() {
         if (!this.profileForm) return;
 
+        // Clear existing form fields
         this.profileForm.innerHTML = '';
         this.profileNameInput.value = this.currentProfile.name;
 
-        // Merge current profile with default profile
+        // Merge current profile with default profile to ensure all fields are present
         const mergedProfile = {...this.getDefaultProfile(), ...this.currentProfile.info};
 
+        // Sort fields by position and create form elements
         Object.values(mergedProfile)
             .sort((a, b) => a.position - b.position)
             .forEach(field => {
+                // Create form group container
                 const formGroup = document.createElement('div');
                 formGroup.className = 'form-group';
 
+                // Create label for the field
                 const label = document.createElement('label');
                 label.htmlFor = field.id;
                 label.className = 'form-label';
                 label.textContent = field.label;
 
+                // Create input element
                 const input = document.createElement('input');
                 input.type = field.type;
                 input.className = 'form-control';
@@ -69,23 +112,31 @@ class ProfileManager {
                     input.placeholder = field.placeholder;
                 }
 
+                // Append label and input to form group
                 formGroup.appendChild(label);
                 formGroup.appendChild(input);
                 this.profileForm.appendChild(formGroup);
             });
 
+        // Update UI components
         this.updateDropdownMenu();
         this.updateSearchInput();
     }
 
+    /**
+     * Save the current profile information
+     * Updates the current profile or creates a new one if the name has changed
+     */
     async saveInfoData() {
         if (!this.profileForm) return;
 
+        // Get the profile name from the input field
         const profileName = this.profileNameInput.value.trim();
         if (!profileName) {
             throw new Error('Profile name cannot be empty');
         }
 
+        // Collect updated info from form inputs
         const updatedInfo = {};
         const inputs = this.profileForm.querySelectorAll('input');
         inputs.forEach(input => {
@@ -100,6 +151,7 @@ class ProfileManager {
             }
         });
 
+        // Update existing profile or create a new one
         if (profileName === this.currentProfile.name) {
             this.currentProfile.info = updatedInfo;
         } else {
@@ -112,11 +164,17 @@ class ProfileManager {
             this.currentProfile = {name: profileName, info: updatedInfo};
         }
 
+        // Save profiles and update UI
         await this.saveProfiles();
         this.updateDropdownMenu();
     }
 
+    /**
+     * Save profiles to Chrome storage
+     * @returns {Promise} A promise that resolves when the save is complete
+     */
     async saveProfiles() {
+        // Save profiles to Chrome storage
         return new Promise((resolve, reject) => {
             chrome.storage.sync.set({ 
                 profiles: this.profiles,
@@ -131,7 +189,12 @@ class ProfileManager {
         });
     }
 
+    /**
+     * Get the default profile structure
+     * @returns {Object} An object containing default profile fields
+     */
     getDefaultProfile() {
+        // Define default profile fields with their properties
         return {
             firstName: { id: 'firstName', label: 'First Name', type: 'text', value: '', position: 1 },
             lastName: { id: 'lastName', label: 'Last Name', type: 'text', value: '', position: 2 },
@@ -147,29 +210,40 @@ class ProfileManager {
         };
     }
 
+    /**
+     * Get a profile by name
+     * @param {string} name - The name of the profile to retrieve
+     * @param {boolean} onlyWithValues - If true, return only fields with non-empty values
+     * @returns {Object} The requested profile, or a default profile if not found
+     */
     getProfile(name, onlyWithValues = false) {
         if (!name) {
             return this.currentProfile;
         }
 
+        // Define default profile
         const defaultProfile = {
             name: 'Default',
             info: this.getDefaultProfile()
         };
 
+        // Find the requested profile
         const profile = this.profiles.find(p => p.name === name);
         if (!profile) {
             return onlyWithValues ? { name: 'Default', info: {} } : defaultProfile;
         }
 
+        // Merge profile info with default profile
         let mergedInfo = {...defaultProfile.info, ...profile.info};
         
+        // Filter out empty fields if onlyWithValues is true
         if (onlyWithValues) {
             mergedInfo = Object.fromEntries(
                 Object.entries(mergedInfo).filter(([, field]) => field.value !== '')
             );
         }
 
+        // Sort fields by position
         const sortedInfo = Object.fromEntries(
             Object.entries(mergedInfo).sort(([, a], [, b]) => a.position - b.position)
         );
@@ -180,15 +254,25 @@ class ProfileManager {
         };
     }
 
+    /**
+     * Display the profile dropdown menu
+     */
     showDropdown() {
         this.updateDropdownMenu();
         this.profileDropdownMenu.style.display = 'block';
     }
 
+    /**
+     * Hide the profile dropdown menu
+     */
     hideDropdown() {
         this.profileDropdownMenu.style.display = 'none';
     }
 
+    /**
+     * Update the dropdown menu with current profiles
+     * Adds checkmarks to the current profile and delete icons to all profiles
+     */
     updateDropdownMenu() {
         this.profileDropdownMenu.innerHTML = '';
         this.profiles.forEach(profile => {
@@ -218,6 +302,9 @@ class ProfileManager {
         });
     }
 
+    /**
+     * Filter profiles in the dropdown based on search input
+     */
     filterProfiles() {
         const searchTerm = this.profileSearchInput.value.toLowerCase().trim();
         const items = this.profileDropdownMenu.querySelectorAll('.dropdown-item');
@@ -229,6 +316,10 @@ class ProfileManager {
         });
     }
 
+    /**
+     * Handle clicks on dropdown menu items
+     * @param {Event} event - The click event
+     */
     onDropdownItemClick(event) {
         const profileItem = event.target.closest('.dropdown-item');
 
@@ -245,10 +336,19 @@ class ProfileManager {
         }
     }
 
+    /**
+     * Get a profile by its name
+     * @param {string} name - The name of the profile to retrieve
+     * @returns {Object|undefined} The profile object if found, undefined otherwise
+     */
     getProfileByName(name) {
         return this.profiles.find(p => p.name === name);
     }
 
+    /**
+     * Select a profile and update the UI
+     * @param {Object} profile - The profile to select
+     */
     selectProfile(profile) {
         this.currentProfile = profile;
         this.updateSearchInput();
@@ -256,6 +356,10 @@ class ProfileManager {
         this.hideDropdown();
     }
 
+    /**
+     * Delete a profile and update the UI
+     * @param {Object} profileToDelete - The profile to delete
+     */
     async deleteProfile(profileToDelete) {
         this.profiles = this.profiles.filter(profile => profile.name !== profileToDelete.name);
         
@@ -272,6 +376,10 @@ class ProfileManager {
         this.loadFields();
     }
 
+    /**
+     * Handle clicks outside the dropdown to close it
+     * @param {Event} event - The click event
+     */
     handleClickOutside(event) {
         if (
             !this.profileSearchInput.contains(event.target) &&
@@ -280,6 +388,9 @@ class ProfileManager {
         }
     }
 
+    /**
+     * Update the search input with the current profile name
+     */
     updateSearchInput() {
         if (this.currentProfile && this.profileSearchInput) {
             this.profileSearchInput.value = this.currentProfile.name;

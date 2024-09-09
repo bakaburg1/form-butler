@@ -135,13 +135,15 @@ class ProfileManager {
         return {
             firstName: { id: 'firstName', label: 'First Name', type: 'text', value: '', position: 1 },
             lastName: { id: 'lastName', label: 'Last Name', type: 'text', value: '', position: 2 },
-            address: { id: 'address', label: 'Address', type: 'text', value: '', position: 3 },
-            city: { id: 'city', label: 'City', type: 'text', value: '', position: 4 },
-            state: { id: 'state', label: 'State', type: 'text', value: '', position: 5 },
-            zipCode: { id: 'zipCode', label: 'ZIP Code', type: 'text', value: '', position: 6 },
-            country: { id: 'country', label: 'Country', type: 'text', value: '', position: 7 },
-            email: { id: 'email', label: 'Email', type: 'email', value: '', position: 8 },
-            phone: { id: 'phone', label: 'Phone', type: 'tel', value: '', position: 9 }
+            age: { id: 'age', label: 'Age', type: 'number', value: '', position: 3 },
+            address: { id: 'address', label: 'Address', type: 'text', value: '', position: 4 },
+            city: { id: 'city', label: 'City', type: 'text', value: '', position: 5 },
+            region: { id: 'region', label: 'Region/State/Province', type: 'text', value: '', position: 6 },
+            postalCode: { id: 'postalCode', label: 'Postal Code', type: 'text', value: '', position: 7 },
+            country: { id: 'country', label: 'Country', type: 'text', value: '', position: 8 },
+            email: { id: 'email', label: 'Email', type: 'email', value: '', position: 9 },
+            phone: { id: 'phone', label: 'Phone', type: 'tel', value: '', position: 10 },
+            birthDate: { id: 'birthDate', label: 'Birth Date', type: 'date', value: '', position: 11, placeholder: 'YYYY-MM-DD' }
         };
     }
 

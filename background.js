@@ -21,38 +21,27 @@ chrome.runtime.onInstalled.addListener(async () => {
 async function initializeLLMInterrogator(modelLabel = null) {
     console.log('Initializing LLMInterrogator...');
     
-    const model = await modelManager.getModel(modelLabel);
+    const model = modelManager.getModel(modelLabel);
+
+    console.log('Model:', model);
+    console.log('Stored data:', await chrome.storage.sync.get() );
     
     if (!model) {
-        msg = 'No model found. LLMInterrogator not initialized.';
-        console.log(msg);
-        chrome.runtime.sendMessage({
-            action: "llmError",
-            error: msg
-        });
+        throw new Error('No model found. LLMInterrogator not initialized.');
         return;
     }
     
-    if (!(model.apiSpecification && model.endpoint && model.apiKey)) {
-        msg = 'Missing required model properties. LLMInterrogator not initialized.';
-        console.log(msg);
-        chrome.runtime.sendMessage({
-            action: "llmError",
-            error: msg
-        });
+    if (!(model.apiSpec && model.endpoint && model.apiKey)) {
+        throw new Error('Missing required model properties. LLMInterrogator not initialized.');
         return;
     }   
     
-    const options = {
-        apiSpecification: model.apiSpecification,
-        endpoint: model.endpoint,
-        model: model.name || "",
-        apiKey: model.apiKey,
-        apiVersion: model.apiVersion
-    };
-
-    llmInterrogator = new LLMInterrogator(options);
-
+    // Rename model.name to model.model
+    model.model = model.name || "";
+    model.apiSpecification = model.apiSpec || "openai";
+    
+    llmInterrogator = new LLMInterrogator(model);
+    
     console.log('LLMInterrogator initialized with model:', model.name);
     
 }
@@ -135,4 +124,29 @@ async function loadPrompt(promptType) {
     const promptText = await response.text();
     console.log('Prompt loaded successfully');
     return promptText;
+}
+
+async function sendErrorMessage(errorMsg) {
+
+    console.log('Backend error:', errorMsg);
+
+    // await chrome.runtime.getViews({ type: 'popup' }).forEach(function(view) {
+    //     chrome.runtime.sendMessage({
+    //         action: "backendError",
+    //         error: errorMsg
+    //     }, (response) => {
+    
+    //         console.log('Backend error:', errorMsg);
+    
+    //         if (response === undefined) { 
+    //             // The popup window is not open
+    //             return;
+    //         }
+    
+    //         if (chrome.runtime.lastError) {
+    //             console.error('Failed to send error message:', chrome.runtime.lastError);
+    //         }
+    //     });
+    // });
+    
 }

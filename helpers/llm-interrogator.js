@@ -1,7 +1,18 @@
 /**
-* Provides an interface for interacting with a large language model (LLM) service, such as OpenAI (and compatible services) or Azure OpenAI.
-* The `LLMInterrogator` class handles the communication with the LLM service, including sending prompts and processing the responses.
-* It supports both OpenAI and Azure OpenAI API interfaces, and allows for customization of the model, endpoint, and API key.
+* Provides an interface for interacting with a large language model (LLM)
+* service, such as OpenAI (and compatible services) or Azure OpenAI. 
+*
+* The `LLMInterrogator` class handles the communication with the LLM service,
+* including sending prompts and processing the responses. It supports both
+* OpenAI and Azure OpenAI API interfaces, and allows for customization of the
+* model, endpoint, and API key.
+*
+* @param {Object} options - The options object for the LLMInterrogator.
+* @param {string} options.apiSpecification - The API specification for the LLM service, either 'azure' or 'openai'.
+* @param {string} options.apiKey - The API key for the LLM service.
+* @param {string} options.model - The model to use for the LLM service.
+* @param {string} options.endpoint - The endpoint for the LLM service.
+* @param {string} options.apiVersion - The API version for the LLM service.
 */
 class LLMInterrogator {
     constructor(options = {}) {

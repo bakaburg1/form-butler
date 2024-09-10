@@ -56,49 +56,11 @@ async function initializeLLMInterrogator(modelLabel = null) {
     console.log('LLMInterrogator initialized with model:', model.name);
 }
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    console.log('Received message:', request.action);
-    if (request.action === "fillForm") {
-        handleFormFill(request.formData, sendResponse);
-    } else if (request.action === "formFocused") {
-        handleFormFocused(request.formBody, request.formId, sendResponse);
-    }
-    return true;
-});
-
-async function handleFormFill(formData, sendResponse) {
-    console.log('Handling form fill request');
+async function getFormCompletion(formBody, formId, callback) {
+    console.log('Handling form completion request for form:', formId);
     if (!llmInterrogator) {
         console.error('LLM not configured');
-        sendResponse({error: "LLM not configured"});
-        return;
-    }
-    
-    try {
-        const prompt = await loadPrompt('form_fill');
-        const personalInfo = profileManager.getProfile(null, true).info;
-        const message = JSON.stringify({
-            formData: formData,
-            personalInfo: personalInfo
-        });
-        console.log('Sending prompt to LLM');
-        const response = await llmInterrogator.promptLLM([
-            { role: "system", content: prompt },
-            { role: "user", content: message }
-        ]);
-        console.log('Received response from LLM');
-        sendResponse({response: response.content[0]});
-    } catch (error) {
-        console.error('Error in handleFormFill:', error);
-        sendResponse({error: error.message});
-    }
-}
-
-async function handleFormFocused(formBody, formId, sendResponse) {
-    console.log('Handling form focused event for form:', formId);
-    if (!llmInterrogator) {
-        console.error('LLM not configured');
-        sendResponse({error: "LLM not configured"});
+        callback({error: "LLM not configured"});
         return;
     }
     
@@ -118,13 +80,13 @@ async function handleFormFocused(formBody, formId, sendResponse) {
         
         const llmResponse = JSON.parse(response.content[0]);
         console.log('Parsed LLM response:', llmResponse);
-        sendResponse({
+        callback({
             formId: formId,
-            fillInstructions: llmResponse
+            fillInstructions: llmResponse.fillInstructions
         });
     } catch (error) {
-        console.error('Error in handleFormFocused:', error);
-        sendResponse({error: error.message});
+        console.error('Error in getFormCompletion:', error);
+        callback({error: error.message});
     }
 }
 

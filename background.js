@@ -37,16 +37,14 @@ async function initializeLLMInterrogator(modelLabel = null) {
     const model = modelManager.getModel(modelLabel);
 
     console.log('Model:', model);
-    console.log('Stored data:', await chrome.storage.sync.get() );
+    console.log('Stored data:', await chrome.storage.sync.get());
     
     if (!model) {
         throw new Error('No model found. LLMInterrogator not initialized.');
-        return;
     }
     
     if (!(model.apiSpec && model.endpoint && model.apiKey)) {
         throw new Error('Missing required model properties. LLMInterrogator not initialized.');
-        return;
     }   
     
     // Rename model.name to model.model
@@ -56,7 +54,6 @@ async function initializeLLMInterrogator(modelLabel = null) {
     llmInterrogator = new LLMInterrogator(model);
     
     console.log('LLMInterrogator initialized with model:', model.name);
-    
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {

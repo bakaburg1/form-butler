@@ -8,7 +8,8 @@
 * model, endpoint, and API key.
 *
 * @param {Object} options - The options object for the LLMInterrogator.
-* @param {string} options.apiSpecification - The API specification for the LLM service, either 'azure' or 'openai'.
+* @param {string} options.apiSpecification - The API specification for the LLM
+* service, either 'azure' or 'openai'.
 * @param {string} options.apiKey - The API key for the LLM service.
 * @param {string} options.model - The model to use for the LLM service.
 * @param {string} options.endpoint - The endpoint for the LLM service.
@@ -31,12 +32,18 @@ class LLMInterrogator {
     }
     
     /**
-    * Sends a request to the LLM (Large Language Model) service with the provided messages and parameters.
-    * 
-    * @param {Array<{role: string, content: string}>|string} messages - The messages to send to the LLM service. Can be an array of message objects or a single string.
-    * @param {Object} [params={}] - Additional parameters to include in the request, such as `temperature`.
-    * @param {boolean} [forceJson=true] - If true, the response format will be forced to a JSON object.
-    * @returns {Promise<{content: string[], usage: Object}>} - The response from the LLM service, including the generated content and usage information.
+    * Sends a request to the LLM (Large Language Model) service with the
+    * provided messages and parameters.
+    *
+    * @param {Array<{role: string, content: string}>|string} messages - The
+    * messages to send to the LLM service. Can be an array of message objects or
+    * a single string.
+    * @param {Object} [params={}] - Additional parameters to include in the
+    * request, such as `temperature`.
+    * @param {boolean} [forceJson=true] - If true, the response format will be
+    * forced to a JSON object.
+    * @returns {Promise<{content: string[], usage: Object}>} - The response from
+    * the LLM service, including the generated content and usage information.
     */
     async promptLLM(messages, params = { temperature: 0 }, forceJson = true) {
       this.abortController = new AbortController();
@@ -87,11 +94,17 @@ class LLMInterrogator {
     }
     
     /**
-    * Processes an array of user messages into a format suitable for sending to an LLM service.
+    * Processes an array of user messages into a format suitable for sending to
+    * an LLM service.
     *
-    * @param {(string|{role: string, content: string})[]} messages - An array of user messages, where each message can be a string or an object with `role` and `content` properties.
-    * @returns {Array<{role: string, content: string}>} - An array of processed messages, where each message is an object with `role` and `content` properties.
-    * @throws {Error} - If the `messages` parameter is missing, is not an array, or contains invalid message formats.
+    * @param {(string|{role: string, content: string})[]} messages - An array of
+    * user messages, where each message can be a string or an object with `role`
+    * and `content` properties.
+    * @returns {Array<{role: string, content: string}>} - An array of processed
+    * messages, where each message is an object with `role` and `content`
+    * properties.
+    * @throws {Error} - If the `messages` parameter is missing, is not an array,
+    * or contains invalid message formats.
     */
     processMessages(messages) {
       if (!messages || messages.length === 0) {
@@ -118,11 +131,14 @@ class LLMInterrogator {
     }
     
     /**
-    * Sends a request to an LLM (Large Language Model) service with the provided request body.
+    * Sends a request to an LLM (Large Language Model) service with the provided
+    * request body.
     *
     * @param {Object} body - The request body to be sent to the LLM service.
-    * @returns {Promise<Response>} - A Promise that resolves to the Response object from the LLM service.
-    * @throws {Error} - If the LLM API is not supported or if there is an error during the request.
+    * @returns {Promise<Response>} - A Promise that resolves to the Response
+    * object from the LLM service.
+    * @throws {Error} - If the LLM API is not supported or if there is an error
+    * during the request.
     */
     async sendRequest(body) {
       let url, headers;

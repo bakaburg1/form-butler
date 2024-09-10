@@ -18,6 +18,19 @@ chrome.runtime.onInstalled.addListener(async () => {
     console.log('Initialization complete.');
 });
 
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    console.log('Received message:', request.action);
+    if (request.action === "requestFormCompletion") {
+        getFormCompletion(request.formData.html, request.formData.id, (result) => {
+            chrome.runtime.sendMessage({
+                action: "formCompletionResult",
+                result: result
+            });
+        });
+    }
+    return true;
+});
+
 async function initializeLLMInterrogator(modelLabel = null) {
     console.log('Initializing LLMInterrogator...');
     

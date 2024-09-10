@@ -17,19 +17,6 @@ function addIdToForms() {
     });
 }
 
-// Wrap Chrome API calls in a function to check for valid context
-function safelyExecuteChromeAPI(callback) {
-    if (chrome && chrome.runtime && chrome.runtime.id) {
-        try {
-            callback();
-        } catch (error) {
-            console.error('Chrome API error:', error);
-        }
-    } else {
-        console.log('Extension context invalid. Unable to execute Chrome API.');
-    }
-}
-
 // Collect form data, excluding hidden and filled fields
 function collectFormData(form) {
     console.log('Collecting form data for form:', form.id);
@@ -79,41 +66,22 @@ document.addEventListener('focusin', function(event) {
             console.log('Form detected:', form.id);
             const formHtml = collectFormData(form);
             console.log('Collected form data:', formHtml);
-            safelyExecuteChromeAPI(() => {
-                console.log('Sending formFocused message to background');
-                chrome.runtime.sendMessage({ action: 'formFocused', formId: form.id, formBody: formHtml }, (response) => {
-                    if (chrome.runtime.lastError) {
-                        console.error('Failed to send message:', chrome.runtime.lastError);
-                    } else {
-                        console.log('Received response from background:', response);
-                    }
-                });
+            
+            // Store form data in Chrome storage
+            chrome.storage.local.set({ currentForm: { id: form.id, html: formHtml } }, () => {
+                console.log('Form data stored in Chrome storage');
+                
+                // Send formFocused message to popup
+                chrome.runtime.sendMessage({ action: 'formFocused' });
             });
         }
     }
 });
 
-// Listen for messages from the plugin
-safelyExecuteChromeAPI(() => {
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-        console.log('Received message in content script:', message);
-        if (message.action === 'fillForm') {
-            fillFormFields(message.formId, message.fieldsToFill);
-        }
-    });
-});
-
-// Check AutoFill setting and add event listener if enabled
-safelyExecuteChromeAPI(() => {
-    chrome.storage.sync.get('autoFill', (data) => {
-        console.log('AutoFill setting:', data.autoFill);
-        if (data.autoFill) {
-            document.addEventListener('focusin', (event) => {
-                if (event.target.tagName === 'INPUT') {
-                    console.log('AutoFill triggered for input:', event.target);
-                    fillFormField(event.target);
-                }
-            });
-        }
-    });
+// Listen for messages from the popup
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    console.log('Received message in content script:', message);
+    if (message.action === 'fillForm') {
+        fillFormFields(message.formId, message.fieldsToFill);
+    }
 });

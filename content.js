@@ -40,12 +40,12 @@ function fillFormFields(formId, fieldsToFill) {
     const form = document.getElementById(formId);
     if (form) {
         fieldsToFill.forEach(field => {
-            const input = form.querySelector(field.selector);
+            const input = form.querySelector(`#${formId} ${field.selector}`);
             if (input) {
                 console.log('Filling field:', field.selector, 'with value:', field.value);
                 input.value = field.value;
             } else {
-                console.warn('Field not found:', field.selector);
+                console.warn('Field not found:', field.selector, 'in form:', formId);
             }
         });
     } else {

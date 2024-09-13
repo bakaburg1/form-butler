@@ -1,3 +1,6 @@
+/* background.js */
+
+
 importScripts('helpers/llm-interrogator.js', 'helpers/profile-manager.js', 'helpers/model-manager.js');
 
 let llmInterrogator;
@@ -18,24 +21,78 @@ chrome.runtime.onInstalled.addListener(async () => {
     console.log('Initialization complete.');
 });
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener(async (request) => {
     console.log('Received message:', request.action);
+    
     if (request.action === "requestFormCompletion") {
-        getFormCompletion(request.formData.html, request.formData.id, (result) => {
-            chrome.runtime.sendMessage({
-                action: "formCompletionResult",
-                result: result
-            });
+        let completion = await getFormCompletion(request.formId)
+        
+        chrome.runtime.sendMessage({
+            action: "formCompletionResult",
+            result: completion
         });
     }
-    return true;
 });
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === "formFocused") {
+        chrome.storage.sync.get('autoFill', (data) => {
+            if (data.autoFill) {
+                processFormCompletion();
+            }
+        });
+    }
+});
+
+function processFormCompletion() {
+    chrome.storage.local.get('currentForm', async (data) => {
+        if (data.currentForm) {
+            try {
+                const result = await generateFormCompletion(data.currentForm);
+                chrome.storage.local.set({ formCompletionResult: result });
+                chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+                    chrome.tabs.sendMessage(tabs[0].id, { action: "formCompletionReady" });
+                });
+            } catch (error) {
+                console.error('Form completion error:', error);
+                // Handle error
+            }
+        }
+    });
+}
+
+async function generateFormCompletion(formData) {
+    try {
+        const prompt = await loadPrompt('form_fill');
+        const personalInfo = profileManager.getProfile(null, true).info;
+        const message = JSON.stringify({
+            formBody: formData.html, // Ensure `formHtml` is correctly referenced
+            personalInfo: personalInfo
+        });
+        console.log('Sending form data to LLM');
+        const response = await llmInterrogator.promptLLM([
+            { role: "system", content: prompt },
+            { role: "user", content: message }
+        ]);
+        console.log('Received response from LLM');
+        
+        const llmResponse = JSON.parse(response.content[0]);
+        console.log('Parsed LLM response:', llmResponse);
+        return {
+            formId: formData.id,
+            fieldsToFill: llmResponse.fillInstructions // Updated key
+        };
+    } catch (error) {
+        console.error('Error in generateFormCompletion:', error);
+        return { error: error.message };
+    }
+}
 
 async function initializeLLMInterrogator(modelLabel = null) {
     console.log('Initializing LLMInterrogator...');
     
     const model = modelManager.getModel(modelLabel);
-
+    
     console.log('Model:', model);
     console.log('Stored data:', await chrome.storage.sync.get());
     
@@ -56,7 +113,7 @@ async function initializeLLMInterrogator(modelLabel = null) {
     console.log('LLMInterrogator initialized with model:', model.name);
 }
 
-async function getFormCompletion(formBody, formId, callback) {
+async function getFormCompletion(formBody, formId) {
     console.log('Handling form completion request for form:', formId);
     if (!llmInterrogator) {
         console.error('LLM not configured');
@@ -80,13 +137,13 @@ async function getFormCompletion(formBody, formId, callback) {
         
         const llmResponse = JSON.parse(response.content[0]);
         console.log('Parsed LLM response:', llmResponse);
-        callback({
+        return {
             formId: formId,
             fillInstructions: llmResponse.fillInstructions
-        });
+        };
     } catch (error) {
         console.error('Error in getFormCompletion:', error);
-        callback({error: error.message});
+        return {error: error.message};
     }
 }
 
@@ -96,29 +153,4 @@ async function loadPrompt(promptType) {
     const promptText = await response.text();
     console.log('Prompt loaded successfully');
     return promptText;
-}
-
-async function sendErrorMessage(errorMsg) {
-
-    console.log('Backend error:', errorMsg);
-
-    // await chrome.runtime.getViews({ type: 'popup' }).forEach(function(view) {
-    //     chrome.runtime.sendMessage({
-    //         action: "backendError",
-    //         error: errorMsg
-    //     }, (response) => {
-    
-    //         console.log('Backend error:', errorMsg);
-    
-    //         if (response === undefined) { 
-    //             // The popup window is not open
-    //             return;
-    //         }
-    
-    //         if (chrome.runtime.lastError) {
-    //             console.error('Failed to send error message:', chrome.runtime.lastError);
-    //         }
-    //     });
-    // });
-    
 }

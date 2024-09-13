@@ -1,4 +1,4 @@
-// options.js
+/* options.js */
 
 // Declare global variables
 let modelManager;

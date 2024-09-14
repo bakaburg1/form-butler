@@ -47,7 +47,7 @@ class ProfileManager {
         }
         
         // Only initialize UI if not in background script
-        if (this.isOptionsPage()) {
+        if (this.isValidPage()) {
             this.initializeDOMReferences();
             this.initializeEventListeners();
             this.loadFields();
@@ -55,7 +55,7 @@ class ProfileManager {
     }
     
     initializeDOMReferences() {
-        if (!this.isOptionsPage()) return;
+        if (!this.isValidPage()) return;
         
         this.profileForm = document.getElementById('profileForm');
         this.profileSearchInput = document.getElementById('profile-search');
@@ -66,7 +66,7 @@ class ProfileManager {
     }
     
     initializeEventListeners() {
-        if (!this.isOptionsPage()) return;
+        if (!this.isValidPage()) return;
 
         this.profileSearchInput.addEventListener('focus', () => this.showDropdown());
         this.profileSearchInput.addEventListener('input', () => this.filterProfiles());
@@ -92,7 +92,7 @@ class ProfileManager {
     * Merges the current profile with the default profile to ensure all fields are present
     */
     loadFields() {
-        if (!this.isOptionsPage()) return;
+        if (!this.isValidPage()) return;
         if (!this.profileForm) return;
         
         // Clear existing form fields
@@ -215,7 +215,7 @@ class ProfileManager {
     * @param {Object} profileToDelete - The profile to delete
     */
     async deleteProfile(profileToDelete) {
-        if (!this.isOptionsPage()) return;
+        if (!this.isValidPage()) return;
 
         this.profiles = this.profiles.filter(
             profile => profile.name !== profileToDelete.name);
@@ -313,7 +313,7 @@ class ProfileManager {
     * Display the profile dropdown menu
     */
     showDropdown() {
-        if (!this.isOptionsPage()) return;
+        if (!this.isValidPage()) return;
         this.updateDropdownMenu();
         this.profileDropdownMenu.style.display = 'block';
     }
@@ -322,7 +322,7 @@ class ProfileManager {
     * Hide the profile dropdown menu
     */
     hideDropdown() {
-        if (!this.isOptionsPage()) return;
+        if (!this.isValidPage()) return;
         this.profileDropdownMenu.style.display = 'none';
     }
     
@@ -331,7 +331,7 @@ class ProfileManager {
     * Adds checkmarks to the current profile and delete icons to all profiles
     */
     updateDropdownMenu() {
-        if (!this.isOptionsPage()) return;
+        if (!this.isValidPage()) return;
         this.profileDropdownMenu.innerHTML = '';
         this.profiles.forEach(profile => {
             const item = document.createElement('li');
@@ -364,7 +364,7 @@ class ProfileManager {
     * Filter profiles in the dropdown based on search input
     */
     filterProfiles() {
-        if (!this.isOptionsPage()) return;
+        if (!this.isValidPage()) return;
         const searchTerm = this.profileSearchInput.value.toLowerCase().trim();
         const items = this.profileDropdownMenu.querySelectorAll('.dropdown-item');
         
@@ -380,7 +380,7 @@ class ProfileManager {
     * @param {Event} event - The click event
     */
     onDropdownItemClick(event) {
-        if (!this.isOptionsPage()) return;
+        if (!this.isValidPage()) return;
         const profileItem = event.target.closest('.dropdown-item');
         
         if (event.target.classList.contains('delete-profile')) {
@@ -410,7 +410,7 @@ class ProfileManager {
     * @param {Object} profile - The profile to select
     */
     selectProfile(profile) {
-        if (!this.isOptionsPage()) return;
+        if (!this.isValidPage()) return;
         this.currentProfile = profile.name;
         this.updateSearchInput();
         this.loadFields();
@@ -422,7 +422,7 @@ class ProfileManager {
     * @param {Event} event - The click event
     */
     handleClickOutside(event) {
-        if (!this.isOptionsPage()) return;
+        if (!this.isValidPage()) return;
         if (
             !this.profileSearchInput.contains(event.target) &&
             !this.profileDropdownMenu.contains(event.target)) {
@@ -434,7 +434,7 @@ class ProfileManager {
         * Update the search input with the current profile name
         */
         updateSearchInput() {
-            if (!this.isOptionsPage()) return;
+            if (!this.isValidPage()) return;
             if (this.currentProfile && this.profileSearchInput) {
                 this.profileSearchInput.value = this.currentProfile;
             }
@@ -444,7 +444,7 @@ class ProfileManager {
         * Add a new field to the profile form
         */
         addField(field = null) {
-            if (!this.isOptionsPage()) return;
+            if (!this.isValidPage()) return;
             
             // Determine if the field is a custom field
             let isCustomField;
@@ -538,7 +538,7 @@ class ProfileManager {
             }
         }
         
-        isOptionsPage() {
-            return location.pathname.includes('options.html');
+        isValidPage() {
+            return location.pathname.includes('options.html') || location.pathname.includes('popup.html');
         }
     }

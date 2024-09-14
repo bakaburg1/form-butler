@@ -43,7 +43,7 @@ class ModelManager {
         this.models = result.models || [];
         this.currentModel = result.currentModel || null;
 
-        if (this.isOptionsPage()) {
+        if (this.isValidPage()) {
             this.initializeDOMReferences();
             this.initializeEventListeners();
             this.initializeModels();
@@ -54,11 +54,11 @@ class ModelManager {
     }
 
     /**
-     * Checks if the current page is the options page.
-     * @returns {boolean} True if the current page is the options page, false otherwise.
+     * Checks if the current page is the options page or the popup page.
+     * @returns {boolean} True if the current page is the options page or the popup page, false otherwise.
      */
-    isOptionsPage() {
-        return location.pathname.includes('options.html');
+    isValidPage() {
+        return location.pathname.includes('options.html') || location.pathname.includes('popup.html');
     }
 
     /**
@@ -80,7 +80,7 @@ class ModelManager {
      * menu, save button, and API specification changes.
      */
     initializeEventListeners() {
-        if (!this.isOptionsPage()) return;
+        if (!this.isValidPage()) return;
         this.searchInput.addEventListener('focus', () => this.showDropdown());
         this.searchInput.addEventListener('input', () => this.filterModels());
         this.dropdownMenu.addEventListener('click', (event) => this.onDropdownItemClick(event));
@@ -96,7 +96,7 @@ class ModelManager {
      * Otherwise, it adds a new model to the list.
      */
     saveModel() {
-        if (!this.isOptionsPage()) return;
+        if (!this.isValidPage()) return;
 
         this.saveButton.disabled = true;
 
@@ -163,7 +163,7 @@ class ModelManager {
      * @param {string} modelLabel - The label of the model to be deleted.
      */
     deleteModel(modelLabel) {
-        if (!this.isOptionsPage()) return;
+        if (!this.isValidPage()) return;
         
         this.models = this.models.filter(model => model.label !== modelLabel);
 
@@ -178,7 +178,7 @@ class ModelManager {
      * populates the UI fields with its data.
      */
     loadFields() {
-        if (!this.isOptionsPage()) return;
+        if (!this.isValidPage()) return;
 
         if (this.currentModel && this.models.length > 0) {
             const currentModelDetails = this.models.find(model => 
@@ -215,7 +215,7 @@ class ModelManager {
      * to 'block'. This method is called when the search input receives focus.
      */
     showDropdown() {
-        if (!this.isOptionsPage()) return;
+        if (!this.isValidPage()) return;
         this.updateDropdownMenu(); // Ensure the dropdown content is up-to-date
         this.dropdownMenu.style.display = 'block';
     }
@@ -226,7 +226,7 @@ class ModelManager {
      * a model.
      */
     hideDropdown() {
-        if (!this.isOptionsPage()) return;
+        if (!this.isValidPage()) return;
         this.dropdownMenu.style.display = 'none';
     }
     
@@ -237,7 +237,7 @@ class ModelManager {
      * selection indicators and delete buttons.
      */
     updateDropdownMenu() {
-        if (!this.isOptionsPage()) return;
+        if (!this.isValidPage()) return;
         this.dropdownMenu.innerHTML = ''; // Clear existing content
 
         // Check if there are no models
@@ -298,7 +298,7 @@ class ModelManager {
      * input, providing real-time filtering.
      */
     filterModels() {
-        if (!this.isOptionsPage()) return;
+        if (!this.isValidPage()) return;
         const searchTerm = this.searchInput.value.toLowerCase().trim();
         const items = this.dropdownMenu.querySelectorAll('.dropdown-item');
         const headers = this.dropdownMenu.querySelectorAll('.dropdown-header');
@@ -329,7 +329,7 @@ class ModelManager {
      * @param {Event} event - The click event object.
      */
     onDropdownItemClick(event) {
-        if (!this.isOptionsPage()) return;
+        if (!this.isValidPage()) return;
         const model_item = event.target.closest('.dropdown-item');
 
         if (event.target.classList.contains('delete-model')) {
@@ -351,7 +351,7 @@ class ModelManager {
      * @param {string} modelLabel - The label of the model to be selected.
      */
     selectModel(modelLabel) {
-        if (!this.isOptionsPage()) return;
+        if (!this.isValidPage()) return;
         const model = this.getModel(modelLabel);
         if (!model) return;
 
@@ -376,7 +376,7 @@ class ModelManager {
      * @param {Event} event - The click event that triggered this function.
      */
     handleClickOutside(event) {
-        if (!this.isOptionsPage()) return;
+        if (!this.isValidPage()) return;
         if (!this.searchInput.contains(event.target) && !this.dropdownMenu.contains(event.target)) {
             this.hideDropdown();
         }
@@ -389,7 +389,7 @@ class ModelManager {
      * specification.
      */
     handleAPIChange() {
-        if (!this.isOptionsPage()) return;
+        if (!this.isValidPage()) return;
         let azureFields = document.getElementById('azure-fields')
         let modelInputLabel = document.getElementById('model_input_label')
         let apiVersionInput = document.getElementById('azure-api-version-div')
@@ -408,7 +408,7 @@ class ModelManager {
      * typically called after loading a model or changing the current model.
      */
     updateSearchInput() {
-        if (!this.isOptionsPage() || !this.searchInput) return;
+        if (!this.isValidPage() || !this.searchInput) return;
         if (this.currentModel) {
             this.searchInput.value = this.currentModel.name || '';
         }

@@ -2,7 +2,23 @@
 
 console.log('Content script loaded');
 
-// Function to generate a unique identifier for the form
+/**
+ * Applies the animation to a filled field.
+ * @param {HTMLElement} element - The input element to animate.
+ */
+function animateFilledField(element) {
+    element.classList.add('form-butler-highlight-animation');
+    setTimeout(() => {
+        element.classList.remove('form-butler-highlight-animation');
+    }, 1000);
+}
+
+/**
+ * Generates a unique identifier for the form.
+ * @param {HTMLFormElement} form - The form element.
+ * @param {number} index - The index of the form.
+ * @returns {string} The generated form ID.
+ */
 function generateFormId(form, index) {
     let parentWithId = form.closest('[id]');
     return parentWithId 
@@ -10,7 +26,9 @@ function generateFormId(form, index) {
         : `form_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-// Add IDs to all forms without one
+/**
+ * Adds unique IDs to all forms on the page that do not have one.
+ */
 function addIdToForms() {
     console.log('Adding IDs to forms without one');
     document.querySelectorAll('form:not([id])').forEach((form, index) => {
@@ -19,50 +37,134 @@ function addIdToForms() {
     });
 }
 
-// Collect form data, excluding hidden and filled fields
+/**
+ * Collects form data, excluding hidden and filled fields.
+ * @param {HTMLFormElement} form - The form element.
+ * @returns {Object} An object containing the form ID, HTML, and URL.
+ */
 function collectFormData(form) {
     console.log('Collecting form data for form:', form.id);
     const formClone = form.cloneNode(true);
 
+    // Remove unnecessary elements
     formClone
         .querySelectorAll('input[type="hidden"], input[type="submit"], input[type="button"], input[type="reset"], button')
         .forEach(el => el.remove());
-    // Filter out non-empty fields
+
+    // Remove non-empty fields
     formClone.querySelectorAll('input, textarea, select').forEach(el => {
         if (el.value.trim() !== '') {
             el.remove();
         }
     });
 
-    return formClone.outerHTML;
+    const formHtml = formClone.outerHTML;
+
+    // Get the current page URL
+    const url = window.location.href;
+
+    return { id: form.id, html: formHtml, url: url };
 }
 
-// Function to get formsData from storage
-async function getFormsData() {
+/**
+ * Retrieves the formsData array from chrome.storage.local.
+ * If formId or url is provided, it returns the specific form.
+ * 
+ * @param {string} [formId] - Optional ID of the form to retrieve.
+ * @param {string} [url=window.location.href] - Optional URL of the form, defaults to current page.
+ * @returns {Promise<Array|Object|null>} The array of forms data, specific form, or null if not found.
+ */
+async function getFormsData(formId = null, url = window.location.href) {
     const result = await chrome.storage.local.get('formsData');
-    return result.formsData || [];
+    const formsData = result.formsData || [];
+
+    if (!formId && !url) {
+        return formsData;
+    }
+
+    let filteredFormsData = formsData;
+
+    if (formId || url) { // Updated condition to always filter by URL
+        filteredFormsData = formsData.filter(form => 
+            (!formId || form.id === formId) && // true if formId is not provided or if form.id is equal to formId
+            form.url === url // true if form.url is equal to url    
+        );
+    }
+
+    if (formId) {
+        filteredFormsData = filteredFormsData.find(form => form.id === formId);
+    }
+
+    return filteredFormsData;
 }
 
-// Function to set formsData in storage
+/**
+ * Retrieves the on which the user is currently focused
+ * 
+ * @returns {Promise<Array>} The array of forms data.
+ */
+async function getFocusedForm() {
+    const thisSiteForms = await getFormsData();
+    return thisSiteForms.find(form => form.focused);
+}
+
+/**
+ * Sets the formsData array in chrome.storage.local.
+ * @param {Array} data - The forms data array to store.
+ * @returns {Promise<void>}
+ */
 async function setFormsData(data) {
     await chrome.storage.local.set({ formsData: data });
 }
 
-// Function to update formsData with a new form
+/**
+ * Merges new instructions with existing instructions.
+ * 
+ * @param {Array} existingInstructions - The existing instructions array.
+ * @param {Array} newInstructions - The new instructions array to merge.
+ * @returns {Array} The merged instructions array.
+ */
+function mergeInstructions(existingInstructions, newInstructions) {
+    if (!existingInstructions) {
+        existingInstructions = newInstructions;
+    } else {
+        newInstructions.forEach(newInstruction => {
+            const existingIndex = existingInstructions.findIndex(
+                instruction => instruction.selector === newInstruction.selector
+            );
+            if (existingIndex !== -1) {
+                existingInstructions[existingIndex] = newInstruction;
+            } else {
+                existingInstructions.push(newInstruction);
+            }
+        });
+    }
+
+    return existingInstructions;
+}
+
+/**
+ * Updates the formsData with a new or existing form.
+ * @param {Object} newForm - The form data object to add or update.
+ * @returns {Promise<void>}
+ */
 async function updateFormsData(newForm) {
-    let formsData = await getFormsData();
+    let formsData = await getFormsData(url = null); // Get all forms
 
     // Set 'focused' flag to false for all forms
     formsData.forEach(form => form.focused = false);
 
-    // Check if the form is already in formsData
-    let existingForm = formsData.find(form => form.id === newForm.id);
+    // Check if the form is already in formsData based on id and url
+    let existingForm = formsData.find(form => form.id === newForm.id && form.url === newForm.url);
 
     if (existingForm) {
-        // Update existing form
+        // Update existing form's data with newForm data
+        Object.assign(existingForm, newForm);
+
+        // Set focused flag to true for the existing form
         existingForm.focused = true;
     } else {
-        // Add new form
+        // Add new form data with focused and fulfilled flags
         newForm.focused = true;
         newForm.fulfilled = false;
         formsData.push(newForm);
@@ -71,14 +173,21 @@ async function updateFormsData(newForm) {
     await setFormsData(formsData);
 }
 
-// Function to get 'autoFill' setting
+/**
+ * Retrieves the 'autoFill' setting from chrome.storage.sync.
+ * @returns {Promise<boolean>} The autoFill setting.
+ */
 async function getAutoFillSetting() {
     const result = await chrome.storage.sync.get('autoFill');
     return result.autoFill || false;
 }
 
-// Function to fill form fields with received data
-function fillFormFields(formId, fillInstructions) {
+/**
+ * Fills the form fields with the provided instructions.
+ * @param {string} formId - The ID of the form to fill.
+ * @param {Array} fillInstructions - The instructions on how to fill the form fields.
+ */
+async function fillFormFields(formId, fillInstructions) {
     const form = document.getElementById(formId);
 
     if (!form) {
@@ -88,15 +197,46 @@ function fillFormFields(formId, fillInstructions) {
 
     console.log('Filling form fields for form:', formId);
 
-    fillInstructions.forEach(field => {
+    for (const field of fillInstructions) {
         const input = form.querySelector(field.selector);
-        if (input) {
+        if (input && !input.value.trim() && field.value) { // Only fill if not already filled and if value is provided
+
             console.log('Filling field:', field.selector, 'with value:', field.value);
+
             input.value = field.value;
+
+            animateFilledField(input);
         } else {
-            console.warn('Field not found:', field.selector, 'in form:', formId);
+            console.log('Field not found or already filled:', field.selector, 'in form:', formId);
         }
-    });
+    }
+}
+
+/**
+ * Requests form completion by sending a message to the background script.
+ */
+async function requestFormCompletion() {
+
+    const focusedForm = await getFocusedForm();
+
+    if (!focusedForm) {
+        console.log('No form has been focused');
+        return;
+    }
+
+    if (!focusedForm.fulfilled) {
+        // Request form completion from background script
+        chrome.runtime.sendMessage({ action: 'requestFormCompletion', formData: focusedForm });
+    } else {
+        console.log('Form already fulfilled, applying saved fill instructions.');
+
+        // Fill the form with the saved fill instructions
+        if (focusedForm.fillInstructions) {
+            await fillFormFields(focusedForm.id, focusedForm.fillInstructions);
+        } else {
+            console.log('No fill instructions found for fulfilled form.');
+        }
+    }
 }
 
 // Listen for focus events on input elements
@@ -110,6 +250,7 @@ document.addEventListener('focusin', async (event) => {
         const form = event.target.closest('form');
 
         if (!form) {
+            // TODO: Handle input fields outside of forms
             console.log('No form found for focus event');
             return;
         }
@@ -117,74 +258,49 @@ document.addEventListener('focusin', async (event) => {
         console.log('Form detected:', form.id);
 
         // Collect form data
-        const formHtml = collectFormData(form);
+        const formData = collectFormData(form);
 
-        const formData = { id: form.id, html: formHtml };
-
-        // Update formsData in storage
+        // Update formsData in storage with focus
         await updateFormsData(formData);
 
         // Check if autoFill is enabled
         const autoFill = await getAutoFillSetting();
 
         if (autoFill) {
-            // Get updated formsData
-            const formsData = await getFormsData();
-
-            // Find the focused form
-            const focusedForm = formsData.find(form => form.id === formData.id);
-
-            if (focusedForm && !focusedForm.fulfilled) {
-                // Send requestFormCompletion message to background script
-                chrome.runtime.sendMessage({ action: 'requestFormCompletion', formData: formData });
-            } else {
-                console.log('Form already fulfilled or not found');
-            }
+            // Request form completion from background script
+            requestFormCompletion();
         }
     }
 });
 
-// Listen for messages
+/**
+ * Handles messages received from the background script or popup.
+ */
 chrome.runtime.onMessage.addListener(async (message) => {
-    if (message.action === "formCompletionResult") {
-        // Update formsData with fillInstructions and set fulfilled flag
-        let formsData = await getFormsData();
+    if (message.action === "formCompletionReady") {
+        // Update formsData with fillInstructions
+        let form = await getFormsData(message.formId);
 
-        const formIndex = formsData.findIndex(form => form.id === message.formId);
+        if (form) {
 
-        if (formIndex !== -1) {
-            formsData[formIndex].fillInstructions = message.fillInstructions;
-            formsData[formIndex].fulfilled = true;
+            form.fillInstructions = mergeInstructions(form.fillInstructions, message.fillInstructions); 
+            form.fulfilled = true;
 
-            await setFormsData(formsData);
+            await updateFormsData(form);
 
             // Fill the form
             fillFormFields(message.formId, message.fillInstructions);
         } else {
             console.warn('Form not found in formsData:', message.formId);
         }
+
     } else if (message.action === "formCompletionError") {
+
         console.error('Form completion error:', message.error);
-        // Optionally display an error message to the user
+
     } else if (message.action === "fillForm") {
-        // Handle fillForm request from popup
-
-        // Get formsData
-        const formsData = await getFormsData();
-
-        // Find the focused form
-        const focusedForm = formsData.find(form => form.focused);
-
-        if (focusedForm) {
-            if (!focusedForm.fulfilled) {
-                // Send requestFormCompletion message to background script
-                chrome.runtime.sendMessage({ action: 'requestFormCompletion', formData: focusedForm });
-            } else {
-                // Form already fulfilled, fill the form
-                fillFormFields(focusedForm.id, focusedForm.fillInstructions);
-            }
-        } else {
-            console.log('No focused form found');
-        }
+        
+        // Handle manual fill request from popup
+        requestFormCompletion()
     }
 });

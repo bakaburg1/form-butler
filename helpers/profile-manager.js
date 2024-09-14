@@ -254,8 +254,14 @@ class ProfileManager {
             country: { id: 'country', label: 'Country', type: 'text', value: '', position: 7 },
             email: { id: 'email', label: 'Email', type: 'email', value: '', position: 8 },
             phone: { id: 'phone', label: 'Phone', type: 'tel', value: '', position: 9 },
-            birthDate: { id: 'birthDate', label: 'Birth Date', type: 'date', value: '', position: 10, placeholder: 'YYYY-MM-DD' },
-            age: { id: 'age', label: 'Age', type: 'number', value: '', position: 11 }
+            phoneCountryCode: { id: 'phoneCountryCode', label: 'Phone Country Code', type: 'text', value: '', position: 10 },
+            birthDate: { id: 'birthDate', label: 'Birth Date (dd-mm-yyyy)', type: 'date', value: '', position: 11, placeholder: 'YYYY-MM-DD' },
+            age: { id: 'age', label: 'Age', type: 'number', value: '', position: 12 },
+            nationality: { id: 'nationality', label: 'Nationality', type: 'text', value: '', position: 12 },
+            title: { id: 'title', label: 'Title', type: 'text', value: '', position: 13 },
+            companyInstitutionOrganizationName: { id: 'companyInstitutionOrganizationName', label: 'Company/Institution/Organization Name', type: 'text', value: '', position: 14 },
+            companyInstitutionOrganizationAddress: { id: 'companyInstitutionOrganizationAddress', label: 'Company/Institution/Organization Address', type: 'text', value: '', position: 15 },
+            companyInstitutionOrganizationCountry: { id: 'companyInstitutionOrganizationCountry', label: 'Company/Institution/Organization Country', type: 'text', value: '', position: 16 }
         };
     }
     

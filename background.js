@@ -60,7 +60,7 @@ async function processFormCompletion(formData, tabId) {
 
         // Send formCompletionResult to content script
         chrome.tabs.sendMessage(tabId, {
-            action: "formCompletionResult",
+            action: "formCompletionReady",
             formId: formData.id,
             fillInstructions: llmResponse.fillInstructions
         });

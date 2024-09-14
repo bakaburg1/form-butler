@@ -1,0 +1,24 @@
+@keyframes form-butler-highlight-field {
+    0% { background-color: transparent; }
+    50% { background-color: rgba(255, 255, 0, 0.3); }
+    100% { background-color: transparent; }
+}
+
+@keyframes form-butler-highlight-border {
+    0% { border: 2px solid transparent; }
+    50% { border: 2px solid rgba(0, 0, 255, 0.6); }
+    100% { border: 2px solid transparent; }
+}
+
+@keyframes form-butler-highlight-shadow {
+    0% { box-shadow: 0 0 0px rgba(0, 0, 255, 0); }
+    50% { box-shadow: 0 0 10px rgba(0, 0, 255, 0.6); }
+    100% { box-shadow: 0 0 0px rgba(0, 0, 255, 0); }
+}
+
+.form-butler-highlight-animation {
+    animation: 
+        form-butler-highlight-field 1s ease-in-out, 
+        form-butler-highlight-border 1s ease-in-out, 
+        form-butler-highlight-shadow 1s ease-in-out;
+}

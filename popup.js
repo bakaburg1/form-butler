@@ -1,17 +1,19 @@
-let autoFillCheckbox = null;
+/* popup.js */
 
-document.addEventListener('DOMContentLoaded', () => {
-    autoFillCheckbox = document.getElementById('auto-fill-checkbox');
-    
-    autoFillCheckbox.addEventListener('change', (event) => {
-        chrome.storage.sync.set({autoFill: event.target.checked});
-    });
-    
-    // Load saved auto-fill preference
-    chrome.storage.sync.get('autoFill', (data) => {
-        autoFillCheckbox.checked = data.autoFill || false;
-    });
+// Handle auto-fill checkbox state
+document.addEventListener('DOMContentLoaded', async () => {
+    const { autoFill = false } = await chrome.storage.sync.get('autoFill');
+    document.getElementById('auto-fill-checkbox').checked = autoFill;
 });
 
-// Remove other event listeners and functions related to form filling
-// as they are now handled by the background script
+document.getElementById('auto-fill-checkbox').addEventListener('change', async (event) => {
+    await chrome.storage.sync.set({ autoFill: event.target.checked });
+});
+
+// Handle fill-form button click
+document.getElementById('fill-form-btn').addEventListener('click', () => {
+    // Send message to content script to trigger form filling
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        chrome.tabs.sendMessage(tabs[0].id, { action: 'fillForm' });
+    });
+});

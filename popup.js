@@ -4,6 +4,15 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const { autoFill = false } = await chrome.storage.sync.get('autoFill');
     document.getElementById('auto-fill-checkbox').checked = autoFill;
+
+    // Add event listener for cog button
+    document.getElementById('open-options-btn').addEventListener('click', () => {
+        if (chrome.runtime.openOptionsPage) {
+            chrome.runtime.openOptionsPage();
+        } else {
+            window.open(chrome.runtime.getURL('options.html'));
+        }
+    });
 });
 
 document.getElementById('auto-fill-checkbox').addEventListener('change', async (event) => {

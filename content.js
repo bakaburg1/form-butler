@@ -203,7 +203,26 @@ async function fillFormFields(formId, fillInstructions) {
 
             console.log('Filling field:', field.selector, 'with value:', field.value);
 
+            switch(field.type) {
+                case 'select':
+                    input.value = field.value;
+                    const option = input.querySelector(`option[value='${field.value}']`);
+                    if (option) {
+                        option.selected = true;
+                    }
+                    break;
+                case 'checkbox':
+                    input.checked = field.value === true || field.value === 'true';
+                    break;
+                case 'radio':
+                    const radio = form.querySelector(`${field.selector}[value='${field.value}']`);
+                    if (radio) {
+                        radio.checked = true;
+                    }
+                    break;
+                default:
             input.value = field.value;
+            }
 
             animateFilledField(input);
         } else {

@@ -6,17 +6,19 @@ You will receive two pieces of information:
 2. A JSON object containing a user's personal information.
 
 Output:
-You must return a JSON object containing an array of objects, each with two properties:
+You must return a JSON object containing an array of objects, each with three properties:
 1. "selector": A CSS selector string that uniquely identifies the form element to be filled.
 2. "value": The corresponding value from the user's personal information to be inserted into the form element.
+3. "type": The type of the form element (e.g., "text", "select", "checkbox").
 
 Guidelines:
-- Analyze the form structure carefully, paying attention to input types, labels, and attributes.
+- Analyze the form structure carefully, paying attention to input types, labels, placeholders, date formats and attributes.
 - Match form fields with the most appropriate user information based on context clues.
 - Use specific CSS selectors (preferably IDs or unique combinations of attributes) to ensure accurate targeting of form elements.
 - Only include fields that have a corresponding value in the user's personal information.
 - If a field requires formatting (e.g., dates), format the user's data accordingly.
-- For select elements, choose the option that best matches the user's information.
+- For select elements, return the option **value**, not the displayed text.
+- For phone number fields, try to understand if the form requires the country code in a separate field.
 
 Examples:
 
@@ -42,9 +44,9 @@ User Info:
 Output Example 1:
 {
   "fillInstructions": [
-    {"selector": "#first-name", "value": "John"},
-    {"selector": "#last-name", "value": "Doe"},
-    {"selector": "#email", "value": "john.doe@example.com"}
+    {"selector": "#first-name", "value": "John", "type": "text"},
+    {"selector": "#last-name", "value": "Doe", "type": "text"},
+    {"selector": "#email", "value": "john.doe@example.com", "type": "email"}
   ]
 }
 
@@ -78,10 +80,10 @@ User Info:
 Output Example 2:
 {
   "fillInstructions": [
-    {"selector": "#full-name", "value": "Jane Smith"},
-    {"selector": "#address", "value": "123 Main St"},
-    {"selector": "#city", "value": "New York"},
-    {"selector": "#country", "value": "US"}
+    {"selector": "#full-name", "value": "Jane Smith", "type": "text"},
+    {"selector": "#address", "value": "123 Main St", "type": "text"},
+    {"selector": "#city", "value": "New York", "type": "text"},
+    {"selector": "#country", "value": "US", "type": "select"}
   ]
 }
 

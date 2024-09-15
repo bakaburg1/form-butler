@@ -39,6 +39,14 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
     return true;
 });
 
+// Listen for changes in chrome.storage.sync
+chrome.storage.onChanged.addListener(async (changes, area) => {
+    if (area === 'sync' && changes.currentModel) {
+        console.log('Model changed. Re-initializing LLMInterrogator...');
+        await initializeLLMInterrogator(changes.currentModel.newValue);
+    }
+});
+
 /**
  * Processes the form completion request by sending form data to the LLM and
  * returning the completion instructions.

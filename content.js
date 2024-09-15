@@ -225,6 +225,7 @@ async function requestFormCompletion() {
     }
 
     if (!focusedForm.fulfilled) {
+        console.log('Requesting form completion for form:', focusedForm.id);
         // Request form completion from background script
         chrome.runtime.sendMessage({ action: 'requestFormCompletion', formData: focusedForm });
     } else {

@@ -1,7 +1,11 @@
 /* popup.js */
 
-// Handle auto-fill checkbox state
+// Initialize managers
+const modelManager = new ModelManager();
+const profileManager = new ProfileManager();
+
 document.addEventListener('DOMContentLoaded', async () => {
+    // Handle auto-fill checkbox state
     const { autoFill = false } = await chrome.storage.sync.get('autoFill');
     document.getElementById('auto-fill-checkbox').checked = autoFill;
 
@@ -13,6 +17,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.open(chrome.runtime.getURL('options.html'));
         }
     });
+
+    // Initialize managers
+    await modelManager.init('#model-manager-container', 'selection');
+    await profileManager.init();
+
 });
 
 document.getElementById('auto-fill-checkbox').addEventListener('change', async (event) => {

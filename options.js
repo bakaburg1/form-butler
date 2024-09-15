@@ -13,13 +13,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     profileManager = new ProfileManager();
 
     // Load fields
-    await modelManager.init();
+    await modelManager.init('#model-manager-container', 'editing');
     await profileManager.init();
 
     // Load last active tab
     chrome.storage.session.get(['lastActiveTab'], function(result) {
-        const lastActiveTab = result.lastActiveTab || 'llm';
+        const lastActiveTab = result.lastActiveTab || 'model';
         const tabToActivate = document.getElementById(`${lastActiveTab}-tab`);
+
         const tab = new bootstrap.Tab(tabToActivate);
         tab.show();
     });
@@ -42,7 +43,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     // Add event listeners for tab changes
-    ['llm', 'profile'].forEach(tabId => {
+    ['model', 'profile'].forEach(tabId => {
+        console.log('Adding event listener for tab: ', tabId);
+
         const tab = document.getElementById(`${tabId}-tab`);
         tab.addEventListener('shown.bs.tab', () => {
             chrome.storage.session.set({ lastActiveTab: tabId });

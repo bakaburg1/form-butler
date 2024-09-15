@@ -22,6 +22,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     await modelManager.init('#model-manager-container', 'selection');
     await profileManager.init('#profile-manager-container', 'selection');
 
+    // Rename the stored preference to 'useStoredCompletion'
+    const { useStoredCompletion = true } = await chrome.storage.sync.get('useStoredCompletion');
+    document.getElementById('use-stored-completion-checkbox').checked = useStoredCompletion;
+
+    document.getElementById('use-stored-completion-checkbox').addEventListener('change', async (event) => {
+        await chrome.storage.sync.set({ useStoredCompletion: event.target.checked });
+    });
+
 });
 
 document.getElementById('auto-fill-checkbox').addEventListener('change', async (event) => {

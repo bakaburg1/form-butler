@@ -221,7 +221,7 @@ async function fillFormFields(formId, fillInstructions) {
                     }
                     break;
                 default:
-            input.value = field.value;
+                    input.value = field.value;
             }
 
             animateFilledField(input);
@@ -236,6 +236,8 @@ async function fillFormFields(formId, fillInstructions) {
  */
 async function requestFormCompletion() {
 
+    const { useStoredCompletion } = await chrome.storage.sync.get('useStoredCompletion');
+
     const focusedForm = await getFocusedForm();
 
     if (!focusedForm) {
@@ -243,7 +245,10 @@ async function requestFormCompletion() {
         return;
     }
 
-    if (!focusedForm.fulfilled) {
+    // Check if the form has already been fulfilled and if the user has opted to use stored completion
+    const shouldUseStored = focusedForm.fulfilled && useStoredCompletion;
+
+    if (!shouldUseStored) {
         console.log('Requesting form completion for form:', focusedForm.id);
         // Request form completion from background script
         chrome.runtime.sendMessage({ action: 'requestFormCompletion', formData: focusedForm });

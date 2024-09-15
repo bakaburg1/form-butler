@@ -16,94 +16,200 @@
 class ProfileManager {
     /**
     * Initialize the ProfileManager
-    * Sets up initial state and triggers the initialization process
     */
     constructor() {
+        this.containerElement = null;
+        this.mode = null;
+        
         // Initialize properties to null or empty arrays
         this.currentProfile = null;
         this.profiles = [];
+        
+        // DOM element references
         this.profileForm = null;
         this.profileSearchInput = null;
         this.profileDropdownMenu = null;
         this.profileNameInput = null;
         this.addFieldButton = null;
         this.saveButton = null;
+        this.profileStatus = null;
     }
     
     /**
     * Initialize the ProfileManager
-    * Loads profiles from Chrome storage, sets up the current profile,
-    * and initializes the user interface
+    * @param {string} [containerElement="#profile-manager-container"] - The selector for the container element
+    * @param {string} [mode='editing'] - The mode of operation ('editing' or 'selection')
     */
-    async init() {
+    async init(containerElement = "#profile-manager-container", mode = 'editing') {
         // Retrieve stored profiles and current profile from Chrome storage
         const result = await chrome.storage.sync.get(['profiles', 'currentProfile']);
         this.profiles = result.profiles || [];
-        this.currentProfile = result.currentProfile || 'Default';
+        const currentProfile = result.currentProfile || 'Default';
         
         // Ensure there's at least a default profile
         if (this.profiles.length === 0) {
-            this.profiles.push(this.getProfile('Default'));
+            this.profiles.push({ name: 'Default', info: this.getDefaultProfile() });
         }
         
-        // Only initialize UI if not in background script
-        if (this.isValidPage()) {
-            this.initializeDOMReferences();
-            this.initializeEventListeners();
-            this.loadFields();
+        this.mode = mode;
+        
+        if (!this.isValidPage()) {
+            this.currentProfile = currentProfile;
+            console.log('Profile manager initialized in no-UI mode');
+            return;
         }
+        
+        this.containerElement = document.querySelector(containerElement);
+        
+        if (!this.containerElement) {
+            console.log('Profile manager container element not found');
+            return;
+        }
+        
+        this.initializeDOMReferences();
+        this.initializeEventListeners();
+        
+        this.selectProfile(currentProfile);
+        
     }
     
+    /**
+    * Initializes DOM element references.
+    * If a container element is provided, it generates the UI elements dynamically.
+    * Otherwise, it references existing elements in the DOM.
+    */
     initializeDOMReferences() {
-        if (!this.isValidPage()) return;
+        if (this.containerElement) {
+            if (this.mode === 'editing') {
+                this.createEditingUI();
+            } else if (this.mode === 'selection') {
+                this.createSelectionUI();
+            }
+        }
         
-        this.profileForm = document.getElementById('profileForm');
-        this.profileSearchInput = document.getElementById('profile-search');
-        this.profileDropdownMenu = document.getElementById('profile-dropdown-menu');
-        this.profileNameInput = document.getElementById('profile-name');
-        this.addFieldButton = document.getElementById('add-field-button');
-        this.saveButton = document.getElementById('save-profile-button');
+        // Reference the elements
+        this.profileForm = this.containerElement.querySelector('#profileForm');
+        this.profileSearchInput = this.containerElement.querySelector('#profile-search');
+        this.profileDropdownMenu = this.containerElement.querySelector('#profile-dropdown-menu');
+        this.profileNameInput = this.containerElement.querySelector('#profile-name');
+        this.addFieldButton = this.containerElement.querySelector('#add-field-button');
+        this.saveButton = this.containerElement.querySelector('#save-profile-button');
+        this.profileStatus = this.containerElement.querySelector('#profile-status');
     }
     
+    /**
+    * Generates the editing UI using the provided HTML structure and appends it to the container element.
+    */
+    createEditingUI() {
+        const editingTemplate = `
+            <form id="profile-form" class="options-form">
+                <div class="dropdown form-group">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" id="profile-search" class="form-control" placeholder="Search profiles">
+                    </div>
+                    <ul class="dropdown-menu" id="profile-dropdown-menu">
+                        <!-- Dropdown items will be dynamically populated here -->
+                    </ul>
+                </div>
+                <div class="form-group">
+                    <label for="profile-name" class="form-label">Profile Name</label>
+                    <input type="text" id="profile-name" class="form-control" placeholder="Enter profile name">
+                </div>
+                <div id="profileForm">
+                    <!-- Profile fields will be dynamically populated here -->
+                </div>
+                <div id="add-field-button" class="form-group">
+                    <span class="add-field-label">
+                        <i class="bi bi-plus-circle text-success add-field hide showOnHover"></i>
+                        Add custom field
+                    </span>
+                </div>
+                <button type="button" id="save-profile-button" class="btn btn-primary">Save Profile</button>
+                <div id="profile-status" class="status-message mt-2"></div>
+            </form>
+        `;
+        this.containerElement.innerHTML = editingTemplate;
+    }
+    
+    /**
+    * Generates the selection UI using the provided HTML structure and appends it to the container element.
+    */
+    createSelectionUI() {
+        const selectionTemplate = `
+            <div class="dropdown form-group">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" id="profile-search" class="form-control" placeholder="Search profiles">
+                </div>
+                <ul class="dropdown-menu" id="profile-dropdown-menu">
+                    <!-- Dropdown items will be dynamically populated here -->
+                </ul>
+            </div>
+        `;
+        this.containerElement.innerHTML = selectionTemplate;
+    }
+    
+    /**
+    * Sets up event listeners for various UI elements to handle user interactions.
+    */
     initializeEventListeners() {
         if (!this.isValidPage()) return;
-
+        
         this.profileSearchInput.addEventListener('focus', () => this.showDropdown());
         this.profileSearchInput.addEventListener('input', () => this.filterProfiles());
         this.profileDropdownMenu.addEventListener('click', (event) => this.onDropdownItemClick(event));
-        this.addFieldButton.addEventListener('click', (event) => this.addField());
-        this.saveButton.addEventListener('click', () => this.saveProfile());
         document.addEventListener('click', (event) => this.handleClickOutside(event));
-
-        // Add delegate event listener for deleting custom fields
-        this.profileForm.addEventListener('click', (event) => {
-            const deleteButton = event.target.closest('.delete-custom-field');
-            if (deleteButton) {
-                const formGroup = deleteButton.closest('.form-group');
-                if (formGroup) {
-                    formGroup.remove();
-                }
+        
+        if (this.mode === 'editing') {
+            if (this.addFieldButton) {
+                this.addFieldButton.addEventListener('click', () => this.addField());
             }
-        });
+            if (this.saveButton) {
+                this.saveButton.addEventListener('click', () => this.saveProfile());
+            }
+            if (this.profileForm) {
+                // Add delegate event listener for deleting custom fields
+                this.profileForm.addEventListener('click', (event) => {
+                    const deleteButton = event.target.closest('.delete-custom-field');
+                    if (deleteButton) {
+                        const formGroup = deleteButton.closest('.form-group');
+                        if (formGroup) {
+                            formGroup.remove();
+                        }
+                    }
+                });
+            }
+        }
+    }
+    
+    /**
+    * Checks if the current page is the options page or the popup page.
+    * @returns {boolean} True if the current page is the options page or the popup page, false otherwise.
+    */
+    isValidPage() {
+        return location.pathname.includes('options.html') || location.pathname.includes('popup.html');
     }
     
     /**
     * Load and display form fields based on the current profile
-    * Merges the current profile with the default profile to ensure all fields are present
     */
     loadFields() {
-        if (!this.isValidPage()) return;
+        if (!this.isValidPage() || this.mode !== 'editing') return;
         if (!this.profileForm) return;
         
         // Clear existing form fields
         this.profileForm.innerHTML = '';
-        this.profileNameInput.value = this.currentProfile;
+        if (this.profileNameInput) {
+            this.profileNameInput.value = this.currentProfile;
+        }
         
         // Get the current profile data
+
         const currentProfileData = this.getProfile(this.currentProfile);
         
         // Merge current profile with default profile to ensure all fields are present
-        const mergedProfile = {...this.getDefaultProfile(), ...currentProfileData.info};
+        const mergedProfile = { ...this.getDefaultProfile(), ...currentProfileData.info };
         
         // Separate default fields and custom fields
         const defaultFields = [];
@@ -138,11 +244,10 @@ class ProfileManager {
     
     /**
     * Save the current profile information
-    * Updates the current profile or creates a new one if the name has changed
     */
     async saveProfile() {
         if (!this.profileForm) return;
-
+        
         this.saveButton.disabled = true;
         
         // Get the profile name from the input field
@@ -154,8 +259,7 @@ class ProfileManager {
         // Collect updated info from form inputs
         const updatedInfo = {};
         const inputs = this.profileForm.querySelectorAll('input');
-
-        // Collect updated info from form inputs
+        
         inputs.forEach(input => {
             const label = input.previousElementSibling.querySelector('label');
             const isCustomField = label && label.classList.contains('custom-field');
@@ -174,69 +278,86 @@ class ProfileManager {
         
         // Search for the edited profile
         const existingProfileIndex = this.profiles.findIndex(p => p.name === profileName);
-
+        
         if (existingProfileIndex !== -1) {
             // Update existing profile
-            this.profiles[existingProfileIndex] = {name: profileName, info: updatedInfo};
+            this.profiles[existingProfileIndex] = { name: profileName, info: updatedInfo };
         } else {
             // Create new profile
-            this.profiles.push({name: profileName, info: updatedInfo});
+            this.profiles.push({ name: profileName, info: updatedInfo });
         }
         this.currentProfile = profileName;
         
         // Save profiles and update UI
-        this.saveProfilesToStorage()
+        this.saveProfilesToStorage();
     }
-
+    
     saveProfilesToStorage(successCallback = null) {
-        this.saveButton.disabled = true;
+        if (this.saveButton) {
+            this.saveButton.disabled = true;
+        }
         
-        chrome.storage.sync.set({ 
+        chrome.storage.sync.set({
             profiles: this.profiles,
             currentProfile: this.currentProfile
         }, () => {
             let evt;
-
+            
             if (chrome.runtime.lastError) {
-                evt = new CustomEvent('profileSavingError', { detail: { error: chrome.runtime.lastError.message } })
+                console.error('Error saving profile:', chrome.runtime.lastError);
+                evt = new CustomEvent('profileSavingError', { detail: { error: chrome.runtime.lastError.message } });
+                if (this.profileStatus) {
+                    this.profileStatus.textContent = `Error saving profile: ${chrome.runtime.lastError.message}`;
+                    this.profileStatus.classList.remove('hide');
+                }
             } else {
+                console.log('Profile saved');
                 evt = new CustomEvent('profileSaved');
+                if (this.profileStatus) {
+                    this.profileStatus.textContent = 'Profile saved successfully.';
+                    this.profileStatus.classList.remove('hide');
+                }
                 if (successCallback) {
                     successCallback();
                 }
             }
+            
             document.dispatchEvent(evt);
-            this.saveButton.disabled = false;
+            if (this.saveButton) {
+                this.saveButton.disabled = false;
+            }
         });
     }
-
+    
     /**
     * Delete a profile and update the UI
     * @param {Object} profileToDelete - The profile to delete
     */
     async deleteProfile(profileToDelete) {
         if (!this.isValidPage()) return;
-
+        
         this.profiles = this.profiles.filter(
-            profile => profile.name !== profileToDelete.name);
+            profile => profile.name !== profileToDelete
+        );
         
         // Use the default profile if there are no profiles left
         if (this.profiles.length === 0) {
-            this.profiles.push({name: 'Default', info: this.getDefaultProfile()});
+            this.profiles.push({ name: 'Default', info: this.getDefaultProfile() });
         }
         
         // Select the first profile if the deleted one was the current one
-        if (this.currentProfile === profileToDelete.name) {
+        if (this.currentProfile === profileToDelete) {
             this.currentProfile = this.profiles[0].name;
         }
         
         // Save the updated profiles and update the UI
         this.saveProfilesToStorage(() => {
-            this.loadFields();
+            if (this.mode === 'editing') {
+                this.loadFields();
+            }
             this.updateSearchInput();
         });
     }
-
     
     /**
     * Get the default profile structure
@@ -257,11 +378,11 @@ class ProfileManager {
             phoneCountryCode: { id: 'phoneCountryCode', label: 'Phone Country Code', type: 'text', value: '', position: 10 },
             birthDate: { id: 'birthDate', label: 'Birth Date (dd-mm-yyyy)', type: 'date', value: '', position: 11, placeholder: 'YYYY-MM-DD' },
             age: { id: 'age', label: 'Age', type: 'number', value: '', position: 12 },
-            nationality: { id: 'nationality', label: 'Nationality', type: 'text', value: '', position: 12 },
-            title: { id: 'title', label: 'Title', type: 'text', value: '', position: 13 },
-            companyInstitutionOrganizationName: { id: 'companyInstitutionOrganizationName', label: 'Company/Institution/Organization Name', type: 'text', value: '', position: 14 },
-            companyInstitutionOrganizationAddress: { id: 'companyInstitutionOrganizationAddress', label: 'Company/Institution/Organization Address', type: 'text', value: '', position: 15 },
-            companyInstitutionOrganizationCountry: { id: 'companyInstitutionOrganizationCountry', label: 'Company/Institution/Organization Country', type: 'text', value: '', position: 16 }
+            nationality: { id: 'nationality', label: 'Nationality', type: 'text', value: '', position: 13 },
+            title: { id: 'title', label: 'Title', type: 'text', value: '', position: 14 },
+            companyInstitutionOrganizationName: { id: 'companyInstitutionOrganizationName', label: 'Company/Institution/Organization Name', type: 'text', value: '', position: 15 },
+            companyInstitutionOrganizationAddress: { id: 'companyInstitutionOrganizationAddress', label: 'Company/Institution/Organization Address', type: 'text', value: '', position: 16 },
+            companyInstitutionOrganizationCountry: { id: 'companyInstitutionOrganizationCountry', label: 'Company/Institution/Organization Country', type: 'text', value: '', position: 17 }
         };
     }
     
@@ -273,7 +394,11 @@ class ProfileManager {
     */
     getProfile(name, onlyWithValues = false) {
         if (!name) {
-            return this.getProfile(this.currentProfile);
+            if (this.currentProfile) {
+                return this.getProfile(this.currentProfile);
+            } else {
+                console.error('No profile passed and no current profile set.');
+            }
         }
         
         // Define default profile
@@ -289,7 +414,7 @@ class ProfileManager {
         }
         
         // Merge profile info with default profile
-        let mergedInfo = {...defaultProfile.info, ...profile.info};
+        let mergedInfo = { ...defaultProfile.info, ...profile.info };
         
         // Filter out empty fields if onlyWithValues is true
         if (onlyWithValues) {
@@ -328,7 +453,6 @@ class ProfileManager {
     
     /**
     * Update the dropdown menu with current profiles
-    * Adds checkmarks to the current profile and delete icons to all profiles
     */
     updateDropdownMenu() {
         if (!this.isValidPage()) return;
@@ -350,11 +474,19 @@ class ProfileManager {
             nameSpan.appendChild(checkmark);
             nameSpan.appendChild(document.createTextNode(profile.name));
             
-            const deleteIcon = document.createElement('i');
-            deleteIcon.className = 'bi bi-x-circle text-danger delete-profile hide showOnHover';
+            let deleteIconHTML = '';
+            if (this.mode === 'editing') {
+                deleteIconHTML = '<i class="bi bi-x-circle text-danger delete-profile hide showOnHover"></i>';
+            }
             
-            link.appendChild(nameSpan);
-            link.appendChild(deleteIcon);
+            link.innerHTML = `
+                <span>
+                    <i class="bi bi-check text-success me-2" style="display: ${profile.name === this.currentProfile ? 'inline-block' : 'none'}"></i>
+                    ${profile.name}
+                </span>
+                ${deleteIconHTML}
+            `;
+            
             item.appendChild(link);
             this.profileDropdownMenu.appendChild(item);
         });
@@ -386,35 +518,38 @@ class ProfileManager {
         if (event.target.classList.contains('delete-profile')) {
             event.preventDefault();
             event.stopPropagation();
+
             const profileName = profileItem.dataset.profileName;
-            const profile = this.getProfile(profileName);
-            this.deleteProfile(profile);
+            this.deleteProfile(profileName);
+
         } else if (profileItem) {
+
             const profileName = profileItem.dataset.profileName;
-            const profile = this.getProfile(profileName);
-            this.selectProfile(profile);
+            this.selectProfile(profileName);
         }
     }
     
     /**
-    * Get a profile by its name
-    * @param {string} name - The name of the profile to retrieve
-    * @returns {Object|undefined} The profile object if found, undefined otherwise
-    */
-    getProfileByName(name) {
-        return this.profiles.find(p => p.name === name);
-    }
-    
-    /**
     * Select a profile and update the UI
-    * @param {Object} profile - The profile to select
+    * @param {string} profileName - The name of the profile to select
     */
-    selectProfile(profile) {
+    selectProfile(profileName) {
         if (!this.isValidPage()) return;
-        this.currentProfile = profile.name;
-        this.updateSearchInput();
-        this.loadFields();
+
+        this.currentProfile = profileName;
+        
+        if (this.mode === 'editing') {
+            this.loadFields();
+        } else if (this.mode === 'selection') {
+            // Store the selected profile in storage
+            chrome.storage.sync.set({ currentProfile: this.currentProfile }, () => {
+                console.log('Profile selected:', this.currentProfile);
+            });
+        }
+        
         this.hideDropdown();
+        this.updateDropdownMenu(); // Refresh dropdown to show updated profile list
+        this.updateSearchInput(); // Refresh search input to show updated selected profile
     }
     
     /**
@@ -444,7 +579,7 @@ class ProfileManager {
         * Add a new field to the profile form
         */
         addField(field = null) {
-            if (!this.isValidPage()) return;
+            if (!this.isValidPage() || this.mode !== 'editing') return;
             
             // Determine if the field is a custom field
             let isCustomField;
@@ -537,8 +672,5 @@ class ProfileManager {
                 label.focus();
             }
         }
-        
-        isValidPage() {
-            return location.pathname.includes('options.html') || location.pathname.includes('popup.html');
-        }
     }
+    

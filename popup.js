@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Initialize managers
     await modelManager.init('#model-manager-container', 'selection');
-    await profileManager.init();
+    await profileManager.init('#profile-manager-container', 'selection');
 
 });
 

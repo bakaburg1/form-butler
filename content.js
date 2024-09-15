@@ -224,7 +224,6 @@ async function fillFormFields(formId, fillInstructions) {
                     input.value = field.value;
             }
 
-            animateFilledField(input);
         } else {
             console.log('Field not found or already filled:', field.selector, 'in form:', formId);
         }
@@ -235,7 +234,6 @@ async function fillFormFields(formId, fillInstructions) {
  * Requests form completion by sending a message to the background script.
  */
 async function requestFormCompletion() {
-
     const { useStoredCompletion } = await chrome.storage.sync.get('useStoredCompletion');
 
     const focusedForm = await getFocusedForm();
@@ -244,6 +242,10 @@ async function requestFormCompletion() {
         console.log('No form has been focused');
         return;
     }
+
+    // Add processing class to the form
+    const formElement = document.getElementById(focusedForm.id);
+    formElement.classList.add('form-butler-processing');
 
     // Check if the form has already been fulfilled and if the user has opted to use stored completion
     const shouldUseStored = focusedForm.fulfilled && useStoredCompletion;
@@ -261,6 +263,8 @@ async function requestFormCompletion() {
         } else {
             console.log('No fill instructions found for fulfilled form.');
         }
+
+        formElement.classList.remove('form-butler-processing');
     }
 }
 
@@ -307,7 +311,6 @@ chrome.runtime.onMessage.addListener(async (message) => {
         let form = await getFormsData(message.formId);
 
         if (form) {
-
             form.fillInstructions = mergeInstructions(form.fillInstructions, message.fillInstructions); 
             form.fulfilled = true;
 
@@ -315,6 +318,10 @@ chrome.runtime.onMessage.addListener(async (message) => {
 
             // Fill the form
             fillFormFields(message.formId, message.fillInstructions);
+
+            // Remove processing class from the form
+            const formElement = document.getElementById(message.formId);
+            formElement.classList.remove('form-butler-processing');
         } else {
             console.warn('Form not found in formsData:', message.formId);
         }
@@ -322,6 +329,7 @@ chrome.runtime.onMessage.addListener(async (message) => {
     } else if (message.action === "formCompletionError") {
 
         console.error('Form completion error:', message.error);
+        formElement.classList.remove('form-butler-processing');
 
     } else if (message.action === "fillForm") {
         

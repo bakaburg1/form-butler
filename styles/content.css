@@ -22,3 +22,14 @@
         form-butler-highlight-border 1s ease-in-out, 
         form-butler-highlight-shadow 1s ease-in-out;
 }
+
+.form-butler-processing :is(input, select, textarea, datalist) {
+    background: lightgray;
+    animation: form-butler-shadow-pulse 1s ease-in-out infinite;
+}
+
+@keyframes form-butler-shadow-pulse {
+    0%, 100% { box-shadow: 0 0 0px deepskyblue; }
+    50% { box-shadow: 0 0 15px deepskyblue; }
+    border: 2px solid deepskyblue;
+}

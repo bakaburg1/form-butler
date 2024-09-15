@@ -32,7 +32,7 @@ class ModelManager {
         // Default values and state variables
         this.defaultAPISpec = 'openai';
         this.models = []; // Array to store all available models
-        this.currentModel = null; // Keep currentModel instead of currentModelLabel
+        this.currentModel = null; // Now stores only the model label
     }
     
     /**
@@ -52,27 +52,31 @@ class ModelManager {
     async init(containerElement = "#model-manager-container", mode = 'editing') {
         const result = await chrome.storage.sync.get(['models', 'currentModel']);
         this.models = result.models || [];
-        this.currentModel = result.currentModel || null;
+        this.currentModel = result.currentModel || (this.models.length > 0 ? this.models[0].label : null);
+        
         this.mode = mode;
         
-        if (this.isValidPage()) {
-            this.containerElement = document.querySelector(containerElement) || null;
-
-            if (!this.containerElement) {
-                console.log('Initializing model manager in no-UI mode');
-                return;
-            }
-
-            this.initializeDOMReferences();
-            this.initializeEventListeners();
-            this.initializeModels();
-            debugger;
-            // Show the current model
-            this.selectModel(this.getModel(this.currentModel.label));
-            debugger;
-            this.updateSearchInput();
-            this.updateDropdownMenu();
+        if (!this.isValidPage()) {
+            console.log('Model manager initialized in no-UI mode');
+            return;
         }
+
+        this.containerElement = document.querySelector(containerElement);
+        
+        if (!this.containerElement) {
+            console.log('Model manager container element not found');
+            return;
+        }
+        
+        this.initializeDOMReferences();
+        this.initializeEventListeners();
+        this.initializeModels();
+
+        // Show the current model
+        this.selectModel(this.currentModel);
+        
+        this.updateSearchInput();
+        this.updateDropdownMenu();
     }
     
     /**
@@ -96,7 +100,7 @@ class ModelManager {
                 this.createSelectionUI();
             }
         }
-
+        
         // Reference existing elements
         this.searchInput = document.getElementById('model-search');
         this.dropdownMenu = document.getElementById('model-dropdown-menu');
@@ -207,6 +211,7 @@ class ModelManager {
         this.searchInput.addEventListener('focus', () => this.showDropdown());
         this.searchInput.addEventListener('input', () => this.filterModels());
         this.dropdownMenu.addEventListener('click', (event) => this.onDropdownItemClick(event));
+        
         document.addEventListener('click', (event) => this.handleClickOutside(event));
         
         if (this.mode === 'editing') {
@@ -215,6 +220,16 @@ class ModelManager {
             }
             if (this.apiSpecInput) {
                 this.apiSpecInput.addEventListener('change', () => this.handleAPIChange());
+            }
+
+            if (this.endpointInput && this.apiSpecInput.value === "openai") {
+                this.endpointInput.addEventListener('input', () => {
+                    let value = this.endpointInput.value;
+                    const regex = /\/v1\/chat\/completions$/;
+                    if (regex.test(value)) {
+                        this.endpointInput.value = value.replace(regex, '');
+                    }
+                });
             }
         }
     }
@@ -236,14 +251,12 @@ class ModelManager {
     * populates the UI fields with its data.
     */
     loadFields() {
-
+        
         if (!(this.containerElement || this.isValidPage()) || this.mode !== 'editing') return;
         if (!this.modelInput || !this.endpointInput || !this.apiKeyInput || !this.apiSpecInput) return;
         
         if (this.currentModel && this.models.length > 0) {
-            const currentModelDetails = this.models.find(model => 
-                model.label === this.currentModel.label
-            );
+            const currentModelDetails = this.getModel(this.currentModel);
             
             if (currentModelDetails) {
                 this.apiSpecInput.value = currentModelDetails.apiSpec || 'openai';
@@ -292,7 +305,7 @@ class ModelManager {
             this.models.push(newModel);
         }
         
-        this.currentModel = newModel; // Update currentModel
+        this.currentModel = newModel.label; // Store only the model label
         this.saveModelsToStorage();
     }
     
@@ -354,8 +367,13 @@ class ModelManager {
         this.models = this.models.filter(model => model.label !== modelLabel);
         
         // If the deleted model was the current model, clear currentModel
-        if (this.currentModel && this.currentModel.label === modelLabel) {
-            this.currentModel = null;
+        if (this.currentModel && this.currentModel === modelLabel) {
+            // Find the closest model in the model list
+            if (this.models.length > 0) {
+                this.currentModel = this.models[0].label;
+            } else {
+                this.currentModel = null;
+            }
         }
         
         this.saveModelsToStorage(() => {
@@ -372,9 +390,9 @@ class ModelManager {
     */
     getModel(modelLabel = null) {
         if (modelLabel === null) {
-            return this.currentModel;
+            modelLabel = this.currentModel;
         }
-        // Find and return the model with the matching label
+        
         return this.models.find(m => m.label === modelLabel) || null;
     }
     
@@ -397,7 +415,7 @@ class ModelManager {
         const model = this.getModel(modelLabel);
         if (!model) return;
         
-        this.currentModel = model;
+        this.currentModel = modelLabel; // Assign only the label
         
         if (this.mode === 'editing') {
             // Update UI fields with selected model data
@@ -405,12 +423,13 @@ class ModelManager {
         } else if (this.mode === 'selection') {
             // Store the selected model in storage
             chrome.storage.sync.set({ currentModel: this.currentModel }, () => {
-                console.log('Model selected:', this.currentModel.name);
+                console.log('Model selected:', this.currentModel);
             });
         }
         
         this.hideDropdown();
-        this.updateDropdownMenu(); // Refresh dropdown to show updated selection
+        this.updateDropdownMenu(); // Refresh dropdown to show updated model list
+        this.updateSearchInput(); // Refresh search input to show updated selected model
     }
     
     /**
@@ -462,7 +481,7 @@ class ModelManager {
                 let model_name = (models.length == 1 && !model.name) ? "endpoint default" : model.name || 'Unnamed model';
                 const item = document.createElement('li');
                 
-                let checkIconDisplay = this.currentModel && model.label === this.currentModel.label ? 'inline-block' : 'none';
+                let checkIconDisplay = this.currentModel && model.label === this.currentModel ? 'inline-block' : 'none';
                 
                 item.innerHTML = `
                     <a class="dropdown-item d-flex justify-content-between align-items-center" href="#" data-model-label="${model.label}">
@@ -538,7 +557,8 @@ class ModelManager {
     updateSearchInput() {
         if (!(this.containerElement || this.isValidPage()) || !this.searchInput) return;
         if (this.currentModel) {
-            this.searchInput.value = this.currentModel.name || '';
+            const currentModelDetails = this.getModel();
+            this.searchInput.value = currentModelDetails.name || '';
         } else {
             this.searchInput.value = '';
         }

@@ -169,28 +169,6 @@ async function loadPrompt(promptType) {
 }
 
 /**
- * Retrieve the current card structure without actual values
- * @returns {Object} Card structure template
- */
-async function getCurrentCardStructure() {
-    const result = await chrome.storage.sync.get(['cards', 'currentCard']);
-    const cards = result.cards || [];
-    const currentCardId = result.currentCard;
-    const currentCard = cards.find(card => card.id === currentCardId) || null;
-
-    if (currentCard) {
-        // Return card structure without sensitive data
-        return {
-            cardNumber: "",
-            cardHolder: "",
-            expirationDate: "",
-            cvv: ""
-        };
-    }
-    return {};
-}
-
-/**
  * Replace card placeholders with actual card data
  * @param {Array} cardFillInstructions - Instructions with card placeholders
  * @returns {Array} Instructions with actual card values

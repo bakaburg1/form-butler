@@ -239,6 +239,13 @@ async function fillFormFields(formId, fillInstructions) {
  * Requests form completion by sending a message to the background script.
  */
 async function requestFormCompletion() {
+    // Check if the extension is enabled
+    const { extensionEnabled = true } = await chrome.storage.sync.get('extensionEnabled');
+    if (!extensionEnabled) {
+        console.log('Extension is disabled. Skipping form completion.');
+        return;
+    }
+
     const { useStoredCompletion } = await chrome.storage.sync.get('useStoredCompletion');
 
     const focusedForm = await getFocusedForm();

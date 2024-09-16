@@ -24,6 +24,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     await profileManager.init('#profile-manager-container', 'selection');
     await cardManager.init('#card-manager-container', 'selection'); // Initialize CardManager with a container
 
+    // Initialize Enable/Disable Extension Checkbox
+    const enableCheckbox = document.getElementById('enable-extension-checkbox');
+    const fillFormBtn = document.getElementById('fill-form-btn');
+
+    // Load the checkbox state from storage
+    const { extensionEnabled = true } = await chrome.storage.sync.get('extensionEnabled');
+    enableCheckbox.checked = extensionEnabled;
+    fillFormBtn.disabled = !extensionEnabled;
+
+    // Add event listener for checkbox changes
+    enableCheckbox.addEventListener('change', async (event) => {
+        const isEnabled = event.target.checked;
+        await chrome.storage.sync.set({ extensionEnabled: isEnabled });
+        fillFormBtn.disabled = !isEnabled;
+    });
+
     // Rename the stored preference to 'useStoredCompletion'
     const { useStoredCompletion = true } = await chrome.storage.sync.get('useStoredCompletion');
     document.getElementById('use-stored-completion-checkbox').checked = useStoredCompletion;

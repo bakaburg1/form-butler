@@ -18,15 +18,22 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile-manager-container" type="button" role="tab" aria-controls="profile-manager-container" aria-selected="false">Profile</button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="card-tab" data-bs-toggle="tab" data-bs-target="#card-manager-container" type="button" role="tab" aria-controls="card-manager-container" aria-selected="false">Payment Cards</button>
+            </li>
         </ul>
         <div class="tab-content" id="optionsTabsContent">
             <div class="tab-pane fade show active" id="model-manager-container" role="tabpanel" aria-labelledby="model-tab"></div>
             <div class="tab-pane fade" id="profile-manager-container" role="tabpanel" aria-labelledby="profile-tab"></div>
+            <div class="tab-pane fade" id="card-manager-container" role="tabpanel" aria-labelledby="card-tab">
+                <!-- Card Manager UI will be injected here by CardManager -->
+            </div>
         </div>
     </div>
     <script src="js/bootstrap.bundle.min.js"></script>
     <script src="options.js"></script>
     <script src="helpers/model-manager.js"></script>
     <script src="helpers/profile-manager.js"></script>
+    <script src="helpers/card-manager.js"></script>
 </body>
 </html>

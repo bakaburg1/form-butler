@@ -21,10 +21,16 @@
             </button>
         </h2>
 
+        <!-- Enable/Disable Extension Checkbox -->
+        <div class="form-check mb-3">
+            <input type="checkbox" class="form-check-input" id="enable-extension-checkbox">
+            <label class="form-check-label" for="enable-extension-checkbox">Enable Extension</label>
+        </div>
+
         <div class="d-flex justify-content-center mb-3">
             <button id="fill-form-btn" class="btn btn-primary">Fill Form</button>
         </div>
-        <div class="form-check d-flex justify-content-center">
+        <div class="form-check">
             <div>
                 <input type="checkbox" class="form-check-input" id="auto-fill-checkbox">
                 <label class="form-check-label" for="auto-fill-checkbox">
@@ -33,7 +39,7 @@
             </div>
         </div>
         <!-- Add the new checkbox below the existing auto-fill checkbox -->
-        <div class="form-check d-flex justify-content-center mt-3">
+        <div class="form-check">
             <div>
                 <input type="checkbox" class="form-check-input" id="use-stored-completion-checkbox">
                 <label class="form-check-label" for="use-stored-completion-checkbox">
@@ -41,6 +47,8 @@
                 </label>
             </div>
         </div>
+
+        
     </div>
 
     <!-- Model Selection Dropdown -->
@@ -51,9 +59,14 @@
     <label for="profile-manager-container" class="my-1">Profile:</label>
     <div id="profile-manager-container" class="my-1"></div>
     
+    <!-- Card Selection Dropdown -->
+    <label for="card-manager-container" class="my-1">Payment Card:</label>
+    <div id="card-manager-container" class="my-1"></div>
+    
     <!-- Include Helper Scripts -->
     <script src="helpers/model-manager.js"></script>
     <script src="helpers/profile-manager.js"></script>
+    <script src="helpers/card-manager.js"></script>
     <script src="popup.js"></script>
 </body>
 </html>

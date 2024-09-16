@@ -74,9 +74,7 @@ class ModelManager {
 
         // Show the current model
         this.selectModel(this.currentModel);
-        
-        this.updateSearchInput();
-        this.updateDropdownMenu();
+
     }
     
     /**

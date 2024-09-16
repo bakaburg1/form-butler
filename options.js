@@ -3,6 +3,7 @@
 // Declare global variables
 let modelManager;
 let profileManager;
+let cardManager; // Initialize CardManager
 
 document.addEventListener('DOMContentLoaded', async function() {
     const saveLLMButton = document.getElementById('save-llm-button');
@@ -11,10 +12,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Initialize managers
     modelManager = new ModelManager();
     profileManager = new ProfileManager();
+    cardManager = new CardManager(); // Initialize CardManager
 
     // Load fields
     await modelManager.init('#model-manager-container', 'editing');
-    await profileManager.init();
+    await profileManager.init('#profile-manager-container', 'editing');
+    await cardManager.init('#card-manager-container', 'editing');
 
     // Load last active tab
     chrome.storage.session.get(['lastActiveTab'], function(result) {
@@ -43,7 +46,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     // Add event listeners for tab changes
-    ['model', 'profile'].forEach(tabId => {
+    ['model', 'profile', 'card'].forEach(tabId => {
         console.log('Adding event listener for tab: ', tabId);
 
         const tab = document.getElementById(`${tabId}-tab`);

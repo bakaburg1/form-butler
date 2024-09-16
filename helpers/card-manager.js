@@ -14,6 +14,7 @@ class CardManager {
         // DOM element references
         this.searchInput = null;
         this.dropdownMenu = null;
+        this.cardNameInput = null;
         this.cardHolderInput = null;
         this.cardNumberInput = null;
         this.expiryMonthInput = null;
@@ -24,7 +25,7 @@ class CardManager {
         
         // Default values and state variables
         this.cards = []; // Array to store all available cards
-        this.currentCard = null; // Stores the card ID
+        this.currentCard = null; // Stores the card name
     }
 
     /**
@@ -44,7 +45,7 @@ class CardManager {
     async init(containerElement = "#card-manager-container", mode = 'editing') {
         const result = await chrome.storage.sync.get(['cards', 'currentCard']);
         this.cards = result.cards || [];
-        this.currentCard = result.currentCard || (this.cards.length > 0 ? this.cards[0].id : null);
+        this.currentCard = result.currentCard || (this.cards.length > 0 ? this.cards[0].name : null);
         
         this.mode = mode;
         
@@ -95,6 +96,7 @@ class CardManager {
         this.dropdownMenu = document.getElementById('card-dropdown-menu');
         
         if (this.mode === 'editing') {
+            this.cardNameInput = document.getElementById('card-name-input');
             this.cardHolderInput = document.getElementById('card-holder-input');
             this.cardNumberInput = document.getElementById('card-number-input');
             this.expiryMonthInput = document.getElementById('expiry-month-input');
@@ -119,6 +121,14 @@ class CardManager {
                     <ul class="dropdown-menu" id="card-dropdown-menu">
                         <!-- Dropdown items will be dynamically populated here -->
                     </ul>
+                </div>
+
+                <div class="form-group">
+                    <label for="card-name-input">Card Name</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-card-text"></i></span>
+                        <input type="text" id="card-name-input" class="form-control" placeholder="Card Name">
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -197,21 +207,19 @@ class CardManager {
         
         if (this.mode === 'editing') {
             if (this.saveButton) {
-                this.saveButton.addEventListener('click', () => this.saveCard());
+                this.saveButton.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    this.saveCard();
+                });
             }
         }
     }
 
     /**
-    * Initializes cards by ensuring each card has a unique ID.
+    * Initializes cards. Ensures that card names are unique.
     */
     initializeCards() {
-        this.cards = this.cards.map(card => {
-            if (!card.id) {
-                card.id = this.generateCardId(card);
-            }
-            return card;
-        });
+        // No need to generate IDs, we use 'name' provided by the user.
     }
 
     /**
@@ -220,12 +228,13 @@ class CardManager {
     */
     loadFields() {
         if (!(this.containerElement || this.isValidPage()) || this.mode !== 'editing') return;
-        if (!this.cardHolderInput || !this.cardNumberInput || !this.expiryMonthInput || !this.expiryYearInput || !this.ccvInput) return;
+        if (!this.cardNameInput || !this.cardHolderInput || !this.cardNumberInput || !this.expiryMonthInput || !this.expiryYearInput || !this.ccvInput) return;
         
         if (this.currentCard && this.cards.length > 0) {
             const currentCardDetails = this.getCard(this.currentCard);
             
             if (currentCardDetails) {
+                this.cardNameInput.value = currentCardDetails.name || '';
                 this.cardHolderInput.value = currentCardDetails.holderName || '';
                 this.cardNumberInput.value = currentCardDetails.number || '';
                 this.expiryMonthInput.value = currentCardDetails.expiryMonth || '';
@@ -238,7 +247,7 @@ class CardManager {
     /**
     * Saves the current card to the list of cards and updates the storage.
     *
-    * If a card with the same ID exists, it updates that card.
+    * If a card with the same name exists, it updates that card.
     * Otherwise, it adds a new card to the list.
     */
     saveCard() {
@@ -249,6 +258,7 @@ class CardManager {
         }
         
         const newCard = {
+            name: this.cardNameInput.value.trim(),
             holderName: this.cardHolderInput.value.trim(),
             number: this.cardNumberInput.value.trim(),
             expiryMonth: this.expiryMonthInput.value.trim(),
@@ -256,9 +266,13 @@ class CardManager {
             ccv: this.ccvInput.value.trim()
         };
         
-        newCard.id = this.generateCardId(newCard);
+        if (!newCard.name) {
+            alert('Please provide a name for the card.');
+            this.saveButton.disabled = false;
+            return;
+        }
         
-        const existingIndex = this.cards.findIndex(c => c.id === newCard.id);
+        const existingIndex = this.cards.findIndex(c => c.name === newCard.name);
         
         if (existingIndex !== -1) {
             this.cards[existingIndex] = newCard;
@@ -266,7 +280,7 @@ class CardManager {
             this.cards.push(newCard);
         }
         
-        this.currentCard = newCard.id;
+        this.currentCard = newCard.name;
         this.saveCardsToStorage();
     }
 
@@ -320,18 +334,18 @@ class CardManager {
     /**
     * Deletes the specified card from the list of cards and updates the storage.
     * After deleting, it updates the dropdown menu and filters the cards.
-    * @param {string} cardId - The ID of the card to be deleted.
+    * @param {string} cardName - The name of the card to be deleted.
     */
-    deleteCard(cardId) {
+    deleteCard(cardName) {
         if (!(this.containerElement || this.isValidPage())) return;
         
-        this.cards = this.cards.filter(card => card.id !== cardId);
+        this.cards = this.cards.filter(card => card.name !== cardName);
         
         // If the deleted card was the current card, clear currentCard
-        if (this.currentCard && this.currentCard === cardId) {
-            // Find the closest card in the card list
+        if (this.currentCard && this.currentCard === cardName) {
+            // Find the first card in the card list
             if (this.cards.length > 0) {
-                this.currentCard = this.cards[0].id;
+                this.currentCard = this.cards[0].name;
             } else {
                 this.currentCard = null;
             }
@@ -344,38 +358,29 @@ class CardManager {
     }
 
     /**
-    * Retrieves a card by ID or returns the current card if no ID is provided.
-    * @param {string|null} cardId - The ID of the card to retrieve or null.
+    * Retrieves a card by name or returns the current card if no name is provided.
+    * @param {string|null} cardName - The name of the card to retrieve or null.
     * @returns {Object|null} The found card or null if not found.
     */
-    getCard(cardId = null) {
-        if (cardId === null) {
-            cardId = this.currentCard;
+    getCard(cardName = null) {
+        if (cardName === null) {
+            cardName = this.currentCard;
         }
         
-        return this.cards.find(c => c.id === cardId) || null;
-    }
-
-    /**
-    * Generates a unique ID for a given card by combining its holder name and card number.
-    * @param {Object} card - The card object.
-    * @returns {string} The unique ID for the card.
-    */
-    generateCardId(card) {
-        return `${card.holderName}|${card.number}`;
+        return this.cards.find(c => c.name === cardName) || null;
     }
 
     /**
     * Selects the specified card and updates the form fields accordingly. This
     * method is called when a user clicks on a card in the dropdown menu.
-    * @param {string} cardId - The ID of the card to be selected.
+    * @param {string} cardName - The name of the card to be selected.
     */
-    selectCard(cardId) {
+    selectCard(cardName) {
         if (!(this.containerElement || this.isValidPage())) return;
-        const card = this.getCard(cardId);
+        const card = this.getCard(cardName);
         if (!card) return;
         
-        this.currentCard = cardId;
+        this.currentCard = cardName;
         
         if (this.mode === 'editing') {
             // Update UI fields with selected card data
@@ -429,13 +434,13 @@ class CardManager {
         
         this.cards.forEach((card) => {
             const item = document.createElement('li');
-            let checkIconDisplay = this.currentCard && card.id === this.currentCard ? 'inline-block' : 'none';
+            let checkIconDisplay = this.currentCard && card.name === this.currentCard ? 'inline-block' : 'none';
             
             item.innerHTML = `
-                <a class="dropdown-item d-flex justify-content-between align-items-center" href="#" data-card-id="${card.id}">
+                <a class="dropdown-item d-flex justify-content-between align-items-center" href="#" data-card-name="${card.name}">
                     <span>
                         <i class="bi bi-check text-success me-2" style="display: ${checkIconDisplay}"></i>
-                        ${card.holderName || 'Unnamed Card'}
+                        ${card.name || 'Unnamed Card'}
                     </span>
                     ${this.mode === 'editing' ? '<i class="bi bi-x-circle text-danger delete-card hide showOnHover"></i>' : ''}
                 </a>
@@ -454,25 +459,25 @@ class CardManager {
         const items = this.dropdownMenu.querySelectorAll('.dropdown-item');
         
         items.forEach(item => {
-            const cardId = item.dataset.cardId;
-            const card = this.getCard(cardId);
+            const cardName = item.dataset.cardName;
+            const card = this.getCard(cardName);
             if (card) {
-                // Check if the card holder name matches the search term
-                const matchesSearch = card.holderName.toLowerCase().includes(searchTerm);
+                // Check if the card name matches the search term
+                const matchesSearch = card.name.toLowerCase().includes(searchTerm);
                 item.style.display = matchesSearch ? '' : 'none';
             }
         });
     }
 
     /**
-    * Updates the search input with the current card's holder name. This method is
+    * Updates the search input with the current card's name. This method is
     * typically called after loading a card or changing the current card.
     */
     updateSearchInput() {
         if (!(this.containerElement || this.isValidPage()) || !this.searchInput) return;
         if (this.currentCard) {
             const currentCardDetails = this.getCard();
-            this.searchInput.value = currentCardDetails.holderName || '';
+            this.searchInput.value = currentCardDetails.name || '';
         } else {
             this.searchInput.value = '';
         }
@@ -504,12 +509,12 @@ class CardManager {
         if (event.target.classList.contains('delete-card')) {
             event.preventDefault();
             event.stopPropagation();
-            const cardId = cardItem.dataset.cardId;
-            this.deleteCard(cardId);
+            const cardName = cardItem.dataset.cardName;
+            this.deleteCard(cardName);
         } else {
             if (cardItem) {
-                const cardId = cardItem.dataset.cardId;
-                this.selectCard(cardId);
+                const cardName = cardItem.dataset.cardName;
+                this.selectCard(cardName);
             }
         }
     }

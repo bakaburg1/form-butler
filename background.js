@@ -1,12 +1,13 @@
 /* background.js */
 
 // Import helper scripts
-importScripts('helpers/llm-interrogator.js', 'helpers/profile-manager.js', 'helpers/model-manager.js');
+importScripts('helpers/llm-interrogator.js', 'helpers/profile-manager.js', 'helpers/model-manager.js', 'helpers/card-manager.js');
 
 // Initialize managers
 let llmInterrogator;
 let profileManager;
 let modelManager;
+let cardManager; // Initialize CardManager
 
 // Initialize on installation or update
 chrome.runtime.onInstalled.addListener(async () => {
@@ -22,6 +23,10 @@ chrome.runtime.onInstalled.addListener(async () => {
     
     // Initialize LLM interrogator
     await initializeLLMInterrogator();
+    
+    // Initialize CardManager
+    cardManager = new CardManager();
+    await cardManager.init();
     
     console.log('Initialization complete.');
 });
@@ -68,10 +73,18 @@ async function processFormCompletion(formData, tabId) {
         // Get user personal information
         const personalInfo = profileManager.getProfile(null, true).info;
 
-        // Prepare message content for the LLM
+        // Initialize and strip card data
+        const currentCard = cardManager.getCard();
+        const strippedCard = { ...currentCard };
+        strippedCard.cardNumber = "";
+        strippedCard.cvv = "";
+        strippedCard.expirationDate = "";
+
+        // Prepare message content for the LLM without actual card values
         const messageContent = JSON.stringify({
             formBody: formData.html,
-            personalInfo: personalInfo
+            personalInfo: personalInfo,
+            cardStructure: strippedCard
         });
 
         console.log('Sending form data to LLM');
@@ -88,11 +101,20 @@ async function processFormCompletion(formData, tabId) {
         const llmResponse = JSON.parse(response.content[0]);
         console.log('Parsed LLM response:', llmResponse);
 
+        // Replace card placeholders with actual card data
+        const filledCardInstructions = replaceCardPlaceholders(llmResponse.cardFillInstructions);
+
+        // Merge personal and card instructions
+        const fillInstructions = [
+            ...llmResponse.personalFillInstructions,
+            ...filledCardInstructions
+        ];
+
         // Send the completion instructions back to the content script
         chrome.tabs.sendMessage(tabId, {
             action: "formCompletionReady",
             formId: formData.id,
-            fillInstructions: llmResponse.fillInstructions
+            fillInstructions: fillInstructions
         });
     } catch (error) {
         console.error('Error in processFormCompletion:', error);
@@ -144,4 +166,44 @@ async function loadPrompt(promptType) {
     const promptText = await response.text();
     console.log('Prompt loaded successfully');
     return promptText;
+}
+
+/**
+ * Retrieve the current card structure without actual values
+ * @returns {Object} Card structure template
+ */
+async function getCurrentCardStructure() {
+    const result = await chrome.storage.sync.get(['cards', 'currentCard']);
+    const cards = result.cards || [];
+    const currentCardId = result.currentCard;
+    const currentCard = cards.find(card => card.id === currentCardId) || null;
+
+    if (currentCard) {
+        // Return card structure without sensitive data
+        return {
+            cardNumber: "",
+            cardHolder: "",
+            expirationDate: "",
+            cvv: ""
+        };
+    }
+    return {};
+}
+
+/**
+ * Replace card placeholders with actual card data
+ * @param {Array} cardFillInstructions - Instructions with card placeholders
+ * @returns {Array} Instructions with actual card values
+ */
+function replaceCardPlaceholders(cardFillInstructions) {
+    const currentCard = cardManager.getCard();
+    if (!currentCard) {
+        console.warn('No card selected for filling.');
+        return [];
+    }
+
+    return cardFillInstructions.map(instruction => {
+        let value = currentCard[instruction.value] || '';
+        return { ...instruction, value };
+    });
 }

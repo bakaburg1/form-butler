@@ -210,18 +210,23 @@ async function fillFormFields(formId, fillInstructions) {
                     if (option) {
                         option.selected = true;
                     }
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
                     break;
                 case 'checkbox':
                     input.checked = field.value === true || field.value === 'true';
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
                     break;
                 case 'radio':
                     const radio = form.querySelector(`${field.selector}[value='${field.value}']`);
                     if (radio) {
                         radio.checked = true;
+                        radio.dispatchEvent(new Event('change', { bubbles: true }));
                     }
                     break;
                 default:
                     input.value = field.value;
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
             }
 
         } else {

@@ -3,6 +3,7 @@
 // Initialize managers
 const modelManager = new ModelManager();
 const profileManager = new ProfileManager();
+const cardManager = new CardManager(); // Initialize CardManager
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Handle auto-fill checkbox state
@@ -21,6 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize managers
     await modelManager.init('#model-manager-container', 'selection');
     await profileManager.init('#profile-manager-container', 'selection');
+    await cardManager.init('#card-manager-container', 'selection'); // Initialize CardManager with a container
 
     // Rename the stored preference to 'useStoredCompletion'
     const { useStoredCompletion = true } = await chrome.storage.sync.get('useStoredCompletion');
@@ -43,3 +45,5 @@ document.getElementById('fill-form-btn').addEventListener('click', () => {
         chrome.tabs.sendMessage(tabs[0].id, { action: 'fillForm' });
     });
 });
+
+

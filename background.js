@@ -57,7 +57,7 @@ async function processFormCompletion(formData, tabId) {
 
     if (!llmInterrogator) {
         console.error('LLM not configured');
-        chrome.tabs.sendMessage(tabId, { action: "formCompletionError", error: "LLM not configured" });
+        chrome.tabs.sendMessage(tabId, { action: "formCompletionError", error: "LLM not configured", formId: formData.id });
         return;
     }
 
@@ -116,7 +116,7 @@ async function processFormCompletion(formData, tabId) {
     } catch (error) {
         console.error('Error in processFormCompletion:', error);
         // Send error back to the content script
-        chrome.tabs.sendMessage(tabId, { action: "formCompletionError", error: error.message });
+        chrome.tabs.sendMessage(tabId, { action: "formCompletionError", error: error.message, formId: formData.id });
     }
 }
 

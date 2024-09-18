@@ -17,7 +17,7 @@ Guidelines:
 - Never use the form ID in the selectors, I'll provide it separately.
 - Only include fields that have a corresponding value in the user's personal information or card structure.
 - If a field requires formatting (e.g., dates), format the user's data accordingly.
-- For "select" elements, return the option **value**, not the displayed text.
+- For "select" elements, return the option **value**, not the displayed text. Strive to search for the select choice that best matches the relative value in the user's personal information.
 - For phone number fields, try to understand if the form requires the country code in a separate field.
 - Organize instructions into separate arrays for personal and card data to differentiate their handling.
 - When dealing with card fields:

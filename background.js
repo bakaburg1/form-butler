@@ -3,30 +3,13 @@
 // Import helper scripts
 importScripts('helpers/llm-interrogator.js', 'helpers/profile-manager.js', 'helpers/model-manager.js', 'helpers/card-manager.js');
 
-// Initialize managers
 let llmInterrogator;
+let cardManager;
 let profileManager;
-let modelManager;
-let cardManager; // Initialize CardManager
 
 // Initialize on installation or update
 chrome.runtime.onInstalled.addListener(async () => {
     console.log('Extension installed or updated. Initializing...');
-    
-    // Initialize profile manager
-    profileManager = new ProfileManager();
-    await profileManager.init();
-    
-    // Initialize model manager
-    modelManager = new ModelManager();
-    await modelManager.init();
-    
-    // Initialize LLM interrogator
-    await initializeLLMInterrogator();
-    
-    // Initialize CardManager
-    cardManager = new CardManager();
-    await cardManager.init();
     
     console.log('Initialization complete.');
 });
@@ -60,11 +43,25 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
  * @param {number} tabId - The ID of the tab requesting the completion.
  */
 async function processFormCompletion(formData, tabId) {
+
+    // Initialize profile manager
+    profileManager = new ProfileManager();
+    await profileManager.init();
+
+    // Initialize card manager
+    cardManager = new CardManager();
+    await cardManager.init();
+
+    // Initialize LLM interrogator
+    const llmInterrogator = await initializeLLMInterrogator();
+
     if (!llmInterrogator) {
         console.error('LLM not configured');
-        chrome.tabs.sendMessage(tabId, { action: "formCompletionError", error: "LLM not configured" });
+        chrome.tabs.sendMessage(tabId, { action: "formCompletionError", error: "LLM not configured", formId: formData.id });
         return;
     }
+
+    console.log('Extension initialized');
 
     try {
         // Load the prompt for form filling
@@ -119,7 +116,7 @@ async function processFormCompletion(formData, tabId) {
     } catch (error) {
         console.error('Error in processFormCompletion:', error);
         // Send error back to the content script
-        chrome.tabs.sendMessage(tabId, { action: "formCompletionError", error: error.message });
+        chrome.tabs.sendMessage(tabId, { action: "formCompletionError", error: error.message, formId: formData.id });
     }
 }
 
@@ -130,6 +127,10 @@ async function processFormCompletion(formData, tabId) {
  */
 async function initializeLLMInterrogator(modelLabel = null) {
     console.log('Initializing LLMInterrogator...');
+
+    // Initialize model manager
+    const modelManager = new ModelManager();
+    await modelManager.init();
 
     const model = modelManager.getModel(modelLabel);
 
@@ -149,9 +150,11 @@ async function initializeLLMInterrogator(modelLabel = null) {
     model.apiSpecification = model.apiSpec || "openai";
 
     // Initialize the LLM interrogator with the model
-    llmInterrogator = new LLMInterrogator(model);
+    let llmInterrogator = new LLMInterrogator(model);
 
     console.log('LLMInterrogator initialized with model:', model.name);
+
+    return llmInterrogator;
 }
 
 /**
@@ -166,28 +169,6 @@ async function loadPrompt(promptType) {
     const promptText = await response.text();
     console.log('Prompt loaded successfully');
     return promptText;
-}
-
-/**
- * Retrieve the current card structure without actual values
- * @returns {Object} Card structure template
- */
-async function getCurrentCardStructure() {
-    const result = await chrome.storage.sync.get(['cards', 'currentCard']);
-    const cards = result.cards || [];
-    const currentCardId = result.currentCard;
-    const currentCard = cards.find(card => card.id === currentCardId) || null;
-
-    if (currentCard) {
-        // Return card structure without sensitive data
-        return {
-            cardNumber: "",
-            cardHolder: "",
-            expirationDate: "",
-            cvv: ""
-        };
-    }
-    return {};
 }
 
 /**

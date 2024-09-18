@@ -15,7 +15,7 @@ Guidelines:
 - Match form fields with the most appropriate user or card information based on context clues.
 - Use specific CSS selectors (preferably IDs or unique combinations of attributes) to ensure accurate targeting of form elements.
 - Never use the form ID in the selectors, I'll provide it separately.
-- Only include fields that have a corresponding value in the user's personal information or card structure.
+- Only include fields that have a corresponding value in the html form and in the user's personal information or card structure.
 - If a field requires formatting (e.g., dates), format the user's data accordingly.
 - For "select" elements, return the option **value**, not the displayed text. Strive to search for the select choice that best matches the relative value in the user's personal information.
 - For phone number fields, try to understand if the form requires the country code in a separate field.
@@ -28,7 +28,7 @@ Guidelines:
 
 Here are some examples:
 
-## Example 1
+## Example 1 (favor #ID versus name or attribute selectors)
 
 Input:
 {
@@ -65,11 +65,11 @@ Output:
   ]
 }
 
-## Example 2
+## Example 2 (use the ID wherever possible; do not return card instructions if no card fields are present in the form)
 
 Input:
 {
-  "formBody": "<form id=\"job-application\">\n  <fieldset>\n    <legend>Personal Information</legend>\n    <input type=\"text\" name=\"firstName\" placeholder=\"First Name\" required>\n    <input type=\"text\" name=\"lastName\" placeholder=\"Last Name\" required>\n    <input type=\"email\" name=\"email\" placeholder=\"Email\" required>\n    <input type=\"tel\" name=\"phone\" placeholder=\"Phone\" pattern=\"[0-9]{3}-[0-9]{3}-[0-9]{4}\">\n  </fieldset>\n  <fieldset>\n    <legend>Professional Details</legend>\n    <textarea name=\"summary\" placeholder=\"Professional Summary\"></textarea>\n    <input type=\"number\" name=\"experience\" min=\"0\" max=\"50\" placeholder=\"Years of Experience\">\n    <select name=\"education\">\n      <option value=\"\">Highest Education</option>\n      <option value=\"high_school\">High School</option>\n      <option value=\"bachelors\">Bachelor's Degree</option>\n      <option value=\"masters\">Master's Degree</option>\n      <option value=\"phd\">Ph.D.</option>\n    </select>\n  </fieldset>\n</form>",
+  "formBody": "<form id=\"job-application\">\n  <fieldset>\n    <legend>Personal Information</legend>\n    <input type=\"text\" id=\"firstName\" placeholder=\"First Name\" required>\n    <input type=\"text\" id=\"lastName\" placeholder=\"Last Name\" required>\n    <input type=\"email\" name=\"email\" placeholder=\"Email\" required>\n    <input type=\"tel\" name=\"phone\" placeholder=\"Phone\" pattern=\"[0-9]{3}-[0-9]{3}-[0-9]{4}\">\n  </fieldset>\n  <fieldset>\n    <legend>Professional Details</legend>\n    <textarea name=\"summary\" placeholder=\"Professional Summary\"></textarea>\n    <input type=\"number\" name=\"experience\" min=\"0\" max=\"50\" placeholder=\"Years of Experience\">\n    <select name=\"education\">\n      <option value=\"\">Highest Education</option>\n      <option value=\"high_school\">High School</option>\n      <option value=\"bachelors\">Bachelor's Degree</option>\n      <option value=\"masters\">Master's Degree</option>\n      <option value=\"phd\">Ph.D.</option>\n    </select>\n  </fieldset>\n</form>",
   "personalInfo": {
     "firstName": "Robert",
     "lastName": "Smith",
@@ -85,8 +85,8 @@ Input:
 Output:
 {
   "personalFillInstructions": [
-    {"selector": "input[name='firstName']", "value": "Robert", "type": "text"},
-    {"selector": "input[name='lastName']", "value": "Smith", "type": "text"},
+    {"selector": "#firstName", "value": "Robert", "type": "text"},
+    {"selector": "#lastName", "value": "Smith", "type": "text"},
     {"selector": "input[name='email']", "value": "robert.smith@example.com", "type": "email"},
     {"selector": "input[name='phone']", "value": "555-123-4567", "type": "tel"},
     {"selector": "textarea[name='summary']", "value": "Experienced software developer with 8 years in web technologies.", "type": "textarea"},
@@ -96,7 +96,7 @@ Output:
   "cardFillInstructions": []
 }
 
-## Example 3
+## Example 3 (use classes if IDs and names are not available)
 
 Input:
 {

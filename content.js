@@ -2,6 +2,8 @@
 
 console.log('Content script loaded');
 
+let isRequestPending = false;
+
 /**
  * Applies the animation to a filled field.
  * @param {HTMLElement} element - The input element to animate.
@@ -239,6 +241,7 @@ async function fillFormFields(formId, fillInstructions) {
  * Requests form completion by sending a message to the background script.
  */
 async function requestFormCompletion() {
+    
     // Check if the extension is enabled
     const { extensionEnabled = true } = await chrome.storage.sync.get('extensionEnabled');
     if (!extensionEnabled) {
@@ -246,7 +249,12 @@ async function requestFormCompletion() {
         return;
     }
 
-    const { useStoredCompletion } = await chrome.storage.sync.get('useStoredCompletion');
+    if (isRequestPending) {
+        console.log('Form completion request is already pending.');
+        return;
+    }
+    
+    isRequestPending = true;
 
     const focusedForm = await getFocusedForm();
 
@@ -254,6 +262,8 @@ async function requestFormCompletion() {
         console.log('No form has been focused');
         return;
     }
+    
+    const { useStoredCompletion } = await chrome.storage.sync.get('useStoredCompletion');
 
     // Add processing class to the form
     const formElement = document.getElementById(focusedForm.id);
@@ -277,11 +287,19 @@ async function requestFormCompletion() {
         }
 
         formElement.classList.remove('form-butler-processing');
+        isRequestPending = false;
     }
 }
 
 // Listen for focus events on input elements
 document.addEventListener('focusin', async (event) => {
+
+    if (isRequestPending) {
+        console.log('Form completion request is already pending. Focus event ignored.');
+        return;
+    }
+
+
     if (['input', 'textarea', 'select', 'datalist'].includes(event.target.tagName.toLowerCase()) ||
         (event.target.contentEditable && event.target.contentEditable !== 'false')) 
     {
@@ -334,6 +352,7 @@ chrome.runtime.onMessage.addListener(async (message) => {
             // Remove processing class from the form
             const formElement = document.getElementById(message.formId);
             formElement.classList.remove('form-butler-processing');
+            isRequestPending = false;
         } else {
             console.warn('Form not found in formsData:', message.formId);
         }
@@ -341,7 +360,10 @@ chrome.runtime.onMessage.addListener(async (message) => {
     } else if (message.action === "formCompletionError") {
 
         console.error('Form completion error:', message.error);
+
+        const formElement = document.getElementById(message.formId)
         formElement.classList.remove('form-butler-processing');
+        isRequestPending = false;
 
     } else if (message.action === "fillForm") {
         
